@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lapse: how it works</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+  <header>
+    <div class="brand"><h1>Lapse</h1><p>How it works, and what it cannot tell you</p></div>
+    <nav><a href="index.html">Back to the data</a> <a href="https://github.com/lazizbekravshanov/lapse">Code</a></nav>
+  </header>
+
+  <article class="doc">
+    <h2>1. Where the data comes from</h2>
+    <p>Two public NASA records of the atmosphere, month by month:</p>
+    <table>
+      <tr><th>Name</th><th>What it is</th><th>Years</th></tr>
+      <tr><td>AIRS</td><td>One instrument on NASA's Aqua satellite. It measures the temperature of the air at 24 heights.</td><td>2002 to now</td></tr>
+      <tr><td>MERRA-2</td><td>A weather model corrected by real measurements. 42 heights. Temperature, water vapor and ozone.</td><td>1980 to now</td></tr>
+    </table>
+    <p>We average all the way around the Earth in rings five degrees wide. That keeps the data small and the picture
+      clear, but it hides differences between east and west.</p>
+
+    <h2>2. How a trend is measured</h2>
+    <p>July is always warmer than January, so we first compare each month only with the same month in other years.
+      Then we look at every possible pair of months and ask how fast the value changed between them. The trend is the
+      middle one of all those answers. One freak month cannot bend it.</p>
+
+    <h2>3. How we test it</h2>
+    <p>A trend can appear by chance. We ask how steadily the measurements move in one direction, and we allow for
+      the fact that the air "remembers": a warm month is often followed by another warm month. Because we test
+      hundreds of places at once, we also control how many false alarms are allowed among the ones we flag.</p>
+
+    <h2>4. What the four labels mean</h2>
+    <table id="labels"><tr><th>Label</th><th>Meaning</th></tr></table>
+    <p>Three extra checks can change a label:</p>
+    <ul>
+      <li><strong>A second dataset.</strong> Where AIRS and MERRA-2 overlap, a change is only "Clear" if both show it.</li>
+      <li><strong>Volcano months.</strong> We repeat every trend without the months after big eruptions. If the trend
+        changes by more than half, the label becomes "Disputed".</li>
+      <li><strong>Data-source jumps.</strong> MERRA-2 started using new satellites in 1998 and 2004. If the record jumps
+        at those moments, and the jump explains much of the trend, the label becomes "Disputed".</li>
+    </ul>
+
+    <h2>5. Does it match published science?</h2>
+    <p>Each row uses the same years and heights as the published result.</p>
+    <table id="validation"><tr><th>Published finding</th><th>Source</th><th>Our number</th><th>Match</th></tr></table>
+
+    <h2>6. What this tool cannot tell you</h2>
+    <ul>
+      <li><strong>Why.</strong> A trend shows what changed, not the cause. Where we mention a cause, we name the study.</li>
+      <li><strong>Your town.</strong> Every value is an average around the whole Earth at one distance from the equator.</li>
+      <li><strong>The future.</strong> A trend describes the years measured. It does not promise the same pace ahead.</li>
+      <li><strong>Exact heights.</strong> Satellites measure by air pressure. Our kilometres are a close conversion, not exact.</li>
+      <li><strong>Water vapor high up.</strong> MERRA-2 cannot show real change in water vapor above about 16 km, so we do not show it.</li>
+    </ul>
+
+    <h2>7. Words we use</h2>
+    <dl id="glossary" class="words-list"></dl>
+  </article>
+
+  <footer><p>Built for the 2026 NASA Space Apps Challenge. Not affiliated with NASA.</p></footer>
+
+  <script type="module">
+    const get = (p) => fetch(p).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    const [manifest, content, validation] = await Promise.all([get("data/manifest.json"), get("content/glossary.json"), get("data/validation.json")]);
+    const row = (cells) => `<tr>${cells.map((c) => `<td>${c}</td>`).join("")}</tr>`;
+    if (manifest) document.getElementById("labels").insertAdjacentHTML("beforeend",
+      [2, 1, 0, 3].map((c) => manifest.verdicts.find((v) => v.code === c)).map((v) => row([`<strong>${v.label}</strong>`, v.meaning])).join(""));
+    if (validation) document.getElementById("validation").insertAdjacentHTML("beforeend",
+      validation.rows.map((r) => row([r.finding, r.source, `${r.ours}<br><small>${r.dataset}, ${r.years}</small>`, r.match])).join(""));
+    if (content) document.getElementById("glossary").innerHTML =
+      content.terms.map((t) => `<dt><strong>${t.plain}</strong> <small>(${t.science})</small></dt><dd>${t.explain}</dd>`).join("");
+  </script>
+</body>
+</html>

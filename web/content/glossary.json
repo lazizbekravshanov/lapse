@@ -1,0 +1,36 @@
+{
+  "terms": [
+    {"id": "height", "plain": "Height", "science": "pressure level, in hPa",
+     "explain": "Scientists label heights in the air by pressure. Lower pressure means higher up. We convert pressure to kilometres; the conversion is approximate."},
+    {"id": "rate", "plain": "Degrees per ten years", "science": "kelvin per decade",
+     "explain": "How fast something is changing. A change of one kelvin is exactly a change of one degree Celsius."},
+    {"id": "anomaly", "plain": "Compared with normal for that month", "science": "anomaly",
+     "explain": "July is always warmer than January. To see real change we compare each July only with other Julys, each January only with other Januarys."},
+    {"id": "significant", "plain": "Too consistent to be chance", "science": "statistically significant",
+     "explain": "The measurements move in one direction so steadily that random ups and downs are very unlikely to explain it."},
+    {"id": "not_significant", "plain": "Not proven yet", "science": "not statistically significant",
+     "explain": "We cannot tell the change apart from random ups and downs. It does not mean nothing changed. More years of data may settle it."},
+    {"id": "range", "plain": "Very likely between X and Y", "science": "95% confidence interval",
+     "explain": "No measurement is exact. The range shows where the true value very likely lies."},
+    {"id": "troposphere", "plain": "The weather layer", "science": "troposphere",
+     "explain": "The lowest layer of air, from the ground up to roughly 12 km. Clouds, rain and storms happen here."},
+    {"id": "stratosphere", "plain": "The calm layer above", "science": "stratosphere",
+     "explain": "From roughly 12 km to 50 km. Very dry and stable. The ozone layer is here."},
+    {"id": "reanalysis", "plain": "A weather model corrected by real measurements", "science": "reanalysis",
+     "explain": "A computer model of the atmosphere that is constantly pulled toward what satellites, balloons and stations measured. It covers more years, but it can jump when its measuring instruments change."},
+    {"id": "ring", "plain": "A ring around the Earth", "science": "zonal mean of a latitude band",
+     "explain": "We average all the way around the planet at one distance from the equator. East and west differences are averaged out."}
+  ],
+  "layers": [
+    {"from_km": 0, "to_km": 12, "plain": "The weather layer", "science": "troposphere"},
+    {"from_km": 12, "to_km": 50, "plain": "The calm layer above", "science": "stratosphere"},
+    {"from_km": 50, "to_km": 70, "plain": "The thin layer above that", "science": "mesosphere"}
+  ],
+  "landmarks": [
+    {"km": 8.8, "label": "Mount Everest"},
+    {"km": 11, "label": "Airliners cruise"},
+    {"km": 25, "label": "Ozone layer"},
+    {"km": 33, "label": "Weather balloons pop"},
+    {"km": 41, "label": "Highest skydive"}
+  ]
+}

@@ -1,15 +1,18 @@
-import { setup, INK, MUTED, LINE } from "./draw.js";
+import { setup, minus, INK, MUTED, LINE, ACCENT } from "./draw.js";
 import { monthKey } from "./data.js";
 
-const M = { l: 70, r: 20, t: 38, b: 30 };
-const TINT = { volcano: "rgba(200,73,43,.16)", data_change: "rgba(44,90,140,.18)" };
+const TINT = { volcano: "rgba(200,73,43,.16)", data_change: "rgba(44,90,140,.2)" };
 
-// y: anomalies by month. axis: [{y,m,t}]. keep(t) says whether a month counts for the trend.
+// y: one value per month. axis: [{y, m, t}]. keep(t): does this month count for the trend?
 export function drawSeries(canvas, { y, axis, slope, events, masked, keep, units }) {
   const { ctx, w, h } = setup(canvas);
+  const M = { l: 62, r: 16, t: 40, b: 28 };
   const pts = y.map((v, i) => ({ v, t: axis[i].t })).filter((d) => d.v != null);
   ctx.clearRect(0, 0, w, h);
-  if (!pts.length) return;
+  if (!pts.length) {
+    ctx.fillStyle = MUTED; ctx.textAlign = "center"; ctx.fillText("No measurements at this height here.", w / 2, h / 2);
+    return;
+  }
   const t0 = axis[0].t, t1 = axis[axis.length - 1].t;
   const sorted = pts.map((d) => d.v).sort((a, b) => a - b);
   const span = Math.max(Math.abs(sorted[Math.floor(sorted.length * 0.005)]), Math.abs(sorted[Math.ceil(sorted.length * 0.995) - 1])) * 1.15 || 1;
@@ -21,8 +24,7 @@ export function drawSeries(canvas, { y, axis, slope, events, masked, keep, units
     const a = Math.max(monthKey(e.start), t0), b = Math.min(monthKey(e.end) + 1, t1);
     if (b <= a) continue;
     ctx.fillStyle = TINT[e.kind] || "rgba(0,0,0,.08)";
-    ctx.fillRect(x(a), M.t, Math.max(2, x(b) - x(a)), h - M.t - M.b);
-    // Labels alternate between two rows so neighbours do not collide.
+    ctx.fillRect(x(a), M.t, Math.max(3, x(b) - x(a)), h - M.t - M.b);
     const text = e.label + (masked.includes(e.id) ? " (left out)" : "");
     const right = x(a) + ctx.measureText(text).width > w - M.r;
     ctx.fillStyle = MUTED; ctx.textAlign = right ? "right" : "left"; ctx.textBaseline = "bottom";
@@ -30,14 +32,12 @@ export function drawSeries(canvas, { y, axis, slope, events, masked, keep, units
   }
 
   ctx.strokeStyle = LINE; ctx.beginPath(); ctx.moveTo(M.l, yy(0)); ctx.lineTo(w - M.r, yy(0)); ctx.stroke();
-
   for (const d of pts) {
     ctx.fillStyle = keep(d.t) ? "rgba(31,42,68,.35)" : "rgba(31,42,68,.12)";
     ctx.fillRect(x(d.t) - 1, yy(Math.max(-span, Math.min(span, d.v))) - 1, 2.2, 2.2);
   }
 
-  // 12-month running mean
-  ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.beginPath();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.beginPath();                  // 12-month average
   let pen = false;
   for (let i = 11; i < y.length; i++) {
     const win = y.slice(i - 11, i + 1);
@@ -47,22 +47,21 @@ export function drawSeries(canvas, { y, axis, slope, events, masked, keep, units
   }
   ctx.stroke();
 
-  // Trend line: published slope, placed through the middle of the months that count.
+  // The published trend, drawn through the middle of the months that count.
   if (slope != null) {
     const used = pts.filter((d) => keep(d.t));
     if (used.length) {
       const perMonth = slope / 120;
       const res = used.map((d) => d.v - perMonth * d.t).sort((a, b) => a - b);
-      const c = res[Math.floor(res.length / 2)];
-      const a = used[0].t, b = used[used.length - 1].t;
-      ctx.strokeStyle = "#e2703a"; ctx.lineWidth = 2.5; ctx.beginPath();
+      const c = res[Math.floor(res.length / 2)], a = used[0].t, b = used[used.length - 1].t;
+      ctx.strokeStyle = ACCENT; ctx.lineWidth = 2.5; ctx.beginPath();
       ctx.moveTo(x(a), yy(c + perMonth * a)); ctx.lineTo(x(b), yy(c + perMonth * b)); ctx.stroke();
     }
   }
 
   ctx.fillStyle = MUTED; ctx.textBaseline = "middle"; ctx.textAlign = "right";
-  for (const v of [-span / 1.15, 0, span / 1.15]) ctx.fillText((v > 0 ? "+" : "") + v.toFixed(1) + " " + units, M.l - 6, yy(v));
+  for (const v of [-span / 1.15, 0, span / 1.15]) ctx.fillText(minus((v > 0 ? "+" : "") + v.toFixed(1)) + " " + units, M.l - 6, yy(v));
   ctx.textAlign = "center"; ctx.textBaseline = "top";
-  const y0 = Math.ceil(t0 / 12 / 5) * 5;
-  for (let yr = y0; yr * 12 <= t1; yr += 5) ctx.fillText(String(yr), x(yr * 12), h - M.b + 6);
+  const step = w < 520 ? 10 : 5;
+  for (let yr = Math.ceil(t0 / 12 / step) * step; yr * 12 <= t1; yr += step) ctx.fillText(String(yr), x(yr * 12), h - M.b + 6);
 }
