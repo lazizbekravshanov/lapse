@@ -6,6 +6,7 @@ and "doing statistics". Dimensions: time (monthly), level (hPa), lat (band centr
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -23,7 +24,8 @@ def clean(a: np.ndarray) -> np.ndarray:
 def zonal_bands(field: np.ndarray, lat: np.ndarray) -> np.ndarray:
     """field[level, lat, lon] -> [level, band]. Mean around the globe, then
     cos(latitude)-weighted mean inside each latitude band."""
-    with np.errstate(invalid="ignore"):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)       # e.g. levels below the ground
         zonal = np.nanmean(clean(field), axis=-1)             # [level, lat]
     return lat_bands(zonal, lat)
 

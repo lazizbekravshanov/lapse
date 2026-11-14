@@ -8,9 +8,11 @@ and a 30-second story.
 - [ ] Confirm the local rules on code written before the event, and say in the
       submission what was prepared in advance.
 - [ ] Everyone has an Earthdata login and can run `make demo` and `make serve`.
-- [ ] Run `python -m lapse inspect airs` and `inspect merra2`. Fix names in `config.py`.
-- [ ] Start `python -m lapse fetch airs` (small files, finishes first).
-- [ ] Start `python -m lapse fetch merra2` in a second terminal (the long one).
+- [ ] Approve "NASA GESDISC DATA ARCHIVE" in the Earthdata profile and set `EARTHDATA_TOKEN`.
+- [ ] Run `python -m lapse inspect airs`. Every starred line must appear.
+- [ ] Three-month test: `python -m lapse fetch airs --start 2024-01 --end 2024-03`.
+- [ ] Start `python -m lapse fetch airs` (289 months, finishes first).
+- [ ] Start `python -m lapse fetch merra2` in a second terminal (561 months, the long one).
 
 ## Saturday
 
@@ -40,6 +42,6 @@ and a 30-second story.
 | Risk | Plan B |
 |---|---|
 | MERRA-2 download is slow | Raise `--stride`, or fetch 2002 onward only. AIRS alone still tells the story. |
-| AIRS variable names differ from `config.py` | `lapse inspect airs` prints the real ones. |
+| AIRS latitude or level order is not what `config.py` assumes | `lapse inspect airs` prints the file's structure. A flipped map shows Arctic warming at the South Pole. |
 | Upper-level reanalysis jumps dominate | Show them as the third case. That is what the event shading is for. |
 | Real trends are weaker than the synthetic ones | Expected. The verdict already says "not proven" where the test fails. |

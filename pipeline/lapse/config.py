@@ -44,7 +44,7 @@ class Variable:
     id: str                      # short id used in file names
     label: str                   # plain-language name shown to users
     units: str                   # units of the anomaly series
-    source_names: tuple          # variable name(s) in the NASA file; averaged if several
+    source_names: tuple          # DAP4 path(s) in the NASA file, e.g. "/T"; averaged if several
     scale: float = 1.0           # multiply raw values by this
     relative: bool = False       # True: anomalies in % of the monthly normal
     explain: str = ""            # one-sentence definition for non-experts
@@ -58,25 +58,28 @@ class Dataset:
     short_name: str              # NASA collection short name
     version: str
     start: str                   # first month, "YYYY-MM"
-    levels: tuple
+    levels: tuple                # documented pressure levels, hPa
     variables: tuple
-    lat_dim: str = "lat"
-    lon_dim: str = "lon"
-    lev_dim: str = "lev"
+    shape: tuple                 # source grid: (levels, lats, lons)
+    has_time: bool               # True if arrays carry a leading time axis of size 1
+    lat_path: str                # DAP4 path of the latitude variable
+    lat_is_2d: bool = False      # True if latitude is stored as a [lat, lon] grid
+    lev_path: str | None = None  # DAP4 path of the level variable; None = use `levels`
+    stride: int = 1              # keep every Nth latitude and longitude
     month_regex: str = r"(\d{4})(\d{2})\.nc4"   # finds YYYY and MM in a file name
     note: str = ""
 
 
 T = Variable(
-    id="t", label="Air temperature", units="K", source_names=("T",),
+    id="t", label="Air temperature", units="K", source_names=("/T",),
     explain="How warm the air is at that height.",
 )
 QV = Variable(
-    id="qv", label="Water vapor", units="%", source_names=("QV",), relative=True,
+    id="qv", label="Water vapor", units="%", source_names=("/QV",), relative=True,
     explain="How much water vapor the air holds, compared with normal for that month.",
 )
 O3 = Variable(
-    id="o3", label="Ozone", units="%", source_names=("O3",), relative=True,
+    id="o3", label="Ozone", units="%", source_names=("/O3",), relative=True,
     explain="How much ozone the air holds, compared with normal for that month.",
 )
 
@@ -90,6 +93,12 @@ DATASETS = {
         start="1980-01",
         levels=tuple(MERRA2_LEVELS),
         variables=(T, QV, O3),
+        # Names and sizes confirmed in NASA's catalog (CMR) on 13 Nov 2026.
+        shape=(42, 361, 576),
+        has_time=True,
+        lat_path="/lat",
+        lev_path="/lev",
+        stride=4,
         note="A model blended with observations. Long record, but the satellites "
              "feeding it changed over time, which can create fake jumps high up.",
     ),
@@ -105,14 +114,20 @@ DATASETS = {
         variables=(
             Variable(
                 id="t", label="Air temperature", units="K",
-                source_names=("Temperature_A", "Temperature_D"),
+                source_names=("/ascending/Data_Fields/Temperature_A",
+                              "/descending/Data_Fields/Temperature_D"),
                 explain=T.explain,
             ),
         ),
-        # UNVERIFIED: check these three names with `lapse inspect airs`.
-        lat_dim="Latitude",
-        lon_dim="Longitude",
-        lev_dim="StdPressureLev",
+        # Paths and sizes confirmed in NASA's catalog (CMR) on 13 Nov 2026.
+        # Level order (1000 hPa first) is from the product guide; `lapse inspect airs`
+        # prints the file's own structure if anything looks off.
+        shape=(24, 180, 360),
+        has_time=False,
+        lat_path="/location/Data_Fields/Latitude",
+        lat_is_2d=True,
+        lev_path=None,
+        stride=2,
         month_regex=r"AIRS\.(\d{4})\.(\d{2})\.",
         note="One instrument measuring from orbit since 2002. Shorter record, "
              "independent of the reanalysis model.",

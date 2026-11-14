@@ -3,11 +3,11 @@ name = "lapse"
 version = "0.1.0"
 description = "Vertical trend detective: what is changing in the atmosphere, at which height, and is it significant"
 requires-python = ">=3.10"
-dependencies = ["numpy>=1.26", "scipy>=1.11", "xarray>=2024.1", "netCDF4>=1.6"]
+dependencies = ["numpy>=1.26", "scipy>=1.11", "xarray>=2024.1", "netCDF4>=1.6", "requests>=2.31"]
 
 [project.optional-dependencies]
 # Only needed to download real NASA data (needs a free Earthdata login).
-nasa = ["earthaccess>=0.11", "pydap>=3.5"]
+nasa = ["earthaccess>=0.11"]
 dev = ["pytest>=8"]
 
 [project.scripts]

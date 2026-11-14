@@ -12,8 +12,9 @@ Built for the 2026 NASA Space Apps Challenge, "Be An Earth System Trend Detectiv
 Not affiliated with NASA.
 
 > **Status:** the pipeline, statistics and website run end to end on **synthetic** data.
-> The NASA download code is written but has not been run against the live servers yet.
-> The site shows a banner whenever the data on screen is synthetic.
+> The NASA catalog search and the download request format are tested. The logged-in
+> download has not been run yet. The site shows a banner whenever the data on screen
+> is synthetic.
 
 ## What you see
 
@@ -31,7 +32,7 @@ if a trend survives.
 
 ```bash
 make setup     # install
-make test      # 12 tests
+make test      # 15 tests
 make demo      # synthetic data -> web/data  (about a minute)
 make serve     # http://localhost:8000
 ```
@@ -40,14 +41,20 @@ make serve     # http://localhost:8000
 
 You need a free [Earthdata login](https://urs.earthdata.nasa.gov/).
 
+1. In your Earthdata profile, open **Applications > Authorized Apps** and approve
+   **NASA GESDISC DATA ARCHIVE**.
+2. Open **Generate Token**, copy the token, and keep it out of git:
+
 ```bash
-make setup-nasa
-python -m lapse inspect airs       # check variable names against pipeline/lapse/config.py
-python -m lapse fetch airs --start 2024-01 --end 2024-03   # small test first
-python -m lapse fetch airs
-python -m lapse fetch merra2
+export EARTHDATA_TOKEN="paste-it-here"      # in your own terminal only
+python -m lapse inspect airs                # prints the file's real structure
+python -m lapse fetch airs --start 2024-01 --end 2024-03    # small test first
+python -m lapse fetch airs                  # 289 months
+python -m lapse fetch merra2                # 561 months, the long one
 python -m lapse export
 ```
+
+Downloads are resumable: every month is cached, so rerunning continues where it stopped.
 
 | Dataset | NASA product | Record | Role |
 |---|---|---|---|
@@ -69,7 +76,7 @@ The website does no statistics of its own.
 
 ```
 pipeline/lapse/config.py     datasets, variables, periods, events (edit this first)
-pipeline/lapse/fetch.py      NASA download -> monthly cache -> zonal cubes
+pipeline/lapse/fetch.py      NASA catalog + OPeNDAP download -> monthly cache -> zonal cubes
 pipeline/lapse/synthetic.py  fake cubes for building and testing
 pipeline/lapse/stats.py      trend, significance, false discovery rate
 pipeline/lapse/export.py     cubes -> web/data JSON

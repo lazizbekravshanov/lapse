@@ -23,7 +23,8 @@ def main(argv=None) -> None:
     p.add_argument("dataset", choices=names)
     p.add_argument("--start", help="YYYY-MM (default: start of record)")
     p.add_argument("--end", help="YYYY-MM (default: two months ago)")
-    p.add_argument("--stride", type=int, default=4, help="keep every Nth grid point")
+    p.add_argument("--stride", type=int, help="keep every Nth grid point (default: per dataset)")
+    p.add_argument("--workers", type=int, default=4, help="downloads at the same time")
 
     p = sub.add_parser("assemble", help="rebuild cubes from the month cache")
     p.add_argument("dataset", choices=names)
@@ -42,7 +43,7 @@ def main(argv=None) -> None:
         fetch.inspect(args.dataset)
     if args.cmd == "fetch":
         from . import fetch
-        fetch.fetch(args.dataset, args.start, args.end, args.stride)
+        fetch.fetch(args.dataset, args.start, args.end, args.stride, args.workers)
     if args.cmd == "assemble":
         from . import fetch
         fetch.assemble(args.dataset)
