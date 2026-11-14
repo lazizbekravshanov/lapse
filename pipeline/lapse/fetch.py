@@ -17,6 +17,7 @@ download itself has not been run yet; start with a three-month test.
 
 from __future__ import annotations
 
+import html
 import json
 import os
 import re
@@ -88,7 +89,7 @@ def session():
     token = os.environ.get("EARTHDATA_TOKEN")
     if token:
         s = requests.Session()
-        s.headers["Authorization"] = f"Bearer {token}"
+        s.headers["Authorization"] = f"Bearer {token.strip()}"
         return s
     try:
         import earthaccess
@@ -140,14 +141,68 @@ def _array(var) -> np.ndarray:
     return reduce.clean(np.ma.filled(np.ma.masked_invalid(var[:]).astype(float), np.nan))
 
 
+HELP_REFUSED = """NASA refused the request (HTTP {code}).
+
+{hint}
+
+What the server said: {body}"""
+
+HINT_APP = """Your token looks valid, so the usual cause is that the GES DISC application is
+not approved for your account. In your Earthdata profile open
+Applications > Authorized Apps > Approve More Applications, search
+"NASA GESDISC DATA ARCHIVE", approve it and accept its terms. Then rerun."""
+
+HINT_TOKEN = """The token is the problem: {why}
+Open https://urs.earthdata.nasa.gov > Generate Token, copy the whole token, and in
+THIS terminal window run:  export EARTHDATA_TOKEN="..."   Then rerun."""
+
+
+def token_problem(token: str | None):
+    """Read the token locally (it is a signed text, nothing is sent anywhere).
+    Returns (problem or None, description)."""
+    import base64
+    import time
+
+    if not token:
+        return None, "EARTHDATA_TOKEN is not set in this terminal; using earthaccess."
+    token = token.strip()
+    parts = token.split(".")
+    if len(parts) != 3:
+        return ("it is not a complete Earthdata token (expected three parts separated by dots; "
+                f"got {len(token)} characters)."), "EARTHDATA_TOKEN is set but malformed."
+    try:
+        pad = parts[1] + "=" * (-len(parts[1]) % 4)
+        claims = json.loads(base64.urlsafe_b64decode(pad))
+    except Exception:
+        return "it could not be read. It may have been cut off when pasted.", "EARTHDATA_TOKEN is set but unreadable."
+    who, exp = claims.get("uid", "unknown user"), claims.get("exp")
+    if exp and exp < time.time():
+        return f"it expired on {time.strftime('%d %b %Y', time.gmtime(exp))}.", f"Token for {who}, expired."
+    until = time.strftime("%d %b %Y", time.gmtime(exp)) if exp else "unknown date"
+    return None, f"Token for {who}, valid until {until}."
+
+
+def whoami() -> None:
+    print("Login:", token_problem(os.environ.get("EARTHDATA_TOKEN"))[1])
+
+
+def _check(r) -> None:
+    """Turn a refused request into instructions instead of a stack trace."""
+    if r.status_code in (401, 403):
+        text = re.sub(r"<(script|style)[^>]*>.*?</\1>|<[^>]+>", " ", r.text, flags=re.S)
+        body = " ".join(html.unescape(text).split())[:300] or "(empty reply)"
+        problem, _ = token_problem(os.environ.get("EARTHDATA_TOKEN"))
+        hint = HINT_TOKEN.format(why=problem) if problem else HINT_APP
+        raise SystemExit(HELP_REFUSED.format(code=r.status_code, hint=hint, body=body))
+    r.raise_for_status()
+    if r.content[:15].lower().startswith((b"<!doctype html", b"<html")):
+        raise SystemExit("Got a web page instead of data. The login did not go through; "
+                         "check EARTHDATA_TOKEN and try again.")
+
+
 def download(sess, url: str, ce: str) -> bytes:
     r = sess.get(url + ".dap.nc4", params={"dap4.ce": ce}, timeout=600)
-    if r.status_code in (401, 403):
-        raise PermissionError("Earthdata login was refused. Check your token, and approve the "
-                              "'NASA GESDISC DATA ARCHIVE' application in your Earthdata profile.")
-    r.raise_for_status()
-    if r.content[:1] == b"<":
-        raise PermissionError("Got a web page instead of data. This usually means the login did not go through.")
+    _check(r)
     return r.content
 
 
@@ -198,7 +253,12 @@ def fetch(dataset_id: str, start: str | None = None, end: str | None = None,
 
     found = granules(ds, start, end)
     print(f"{ds.id}: {len(found)} monthly files from {start} to {end}, stride {stride}, {workers} at a time")
+    whoami()
     sess = session()
+    # One request up front, so a login problem stops here with instructions.
+    first_url = next(iter(found.values()), None)
+    if first_url:
+        _check(sess.get(first_url + ".dmr", timeout=120))
     failed = 0
     with ThreadPoolExecutor(max_workers=workers) as pool:
         jobs = [pool.submit(_one, sess, ds, m, u, cache, stride) for m, u in found.items()]
@@ -221,8 +281,9 @@ def inspect(dataset_id: str) -> None:
     ds = config.DATASETS[dataset_id]
     month, url = next(iter(granules(ds, "2024-01", "2024-01").items()))
     print(f"{ds.short_name} {month}\n{url}\n")
+    whoami()
     r = session().get(url + ".dmr", timeout=120)
-    r.raise_for_status()
+    _check(r)
     wanted = {p for v in ds.variables for p in v.source_names} | {ds.lat_path, ds.lev_path}
 
     def walk(node, prefix):

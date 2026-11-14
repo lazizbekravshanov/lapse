@@ -27,3 +27,17 @@ def test_parse_granule():
     assert fetch.parse_granule(config.DATASETS["merra2"], item)[0] == "2024-01"
     item["umm"]["RelatedUrls"] = []
     assert fetch.parse_granule(config.DATASETS["merra2"], item) is None
+
+
+def test_token_problem_reads_expiry_without_network():
+    import base64, json, time
+
+    def make(exp):
+        body = base64.urlsafe_b64encode(json.dumps({"uid": "someone", "exp": exp}).encode()).decode().rstrip("=")
+        return f"aaa.{body}.zzz"
+
+    assert fetch.token_problem(None)[0] is None
+    assert "three parts" in fetch.token_problem("abc")[0]
+    assert "expired" in fetch.token_problem(make(time.time() - 86400))[0]
+    problem, text = fetch.token_problem(make(time.time() + 86400))
+    assert problem is None and "someone" in text
