@@ -65,12 +65,18 @@ def write_cube(path: Path, values: np.ndarray, time: np.ndarray, levels, attrs: 
         },
         attrs={k: str(v) for k, v in (attrs or {}).items()},
     )
-    ds.to_netcdf(path)
+    # Classic netCDF through scipy: small, and it keeps the HDF5 library (and its
+    # noisy diagnostics on some builds) out of the picture.
+    ds.to_netcdf(path, engine="scipy")
 
 
 def read_cube(path: Path) -> xr.Dataset:
-    with xr.open_dataset(path) as ds:
-        return ds.load()
+    try:
+        with xr.open_dataset(path, engine="scipy") as ds:
+            return ds.load()
+    except Exception:                      # a cube written by an older version
+        with xr.open_dataset(path) as ds:
+            return ds.load()
 
 
 def month_index(time: np.ndarray) -> np.ndarray:

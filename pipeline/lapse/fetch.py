@@ -21,6 +21,7 @@ import html
 import json
 import os
 import re
+import tempfile
 import urllib.parse
 import urllib.request
 import warnings
@@ -208,10 +209,22 @@ def download(sess, url: str, ce: str) -> bytes:
 
 def reduce_month(blob: bytes, ds: config.Dataset, variables) -> dict:
     """Server answer -> {variable id: [level, band]} plus "levels"."""
+    out = {}
+    # A real temporary file: opening from memory makes some HDF5 builds print
+    # pages of harmless but alarming diagnostics.
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "month.nc4")
+        with open(path, "wb") as f:
+            f.write(blob)
+        out = _reduce_file(path, ds, variables)
+    return out
+
+
+def _reduce_file(path: str, ds: config.Dataset, variables) -> dict:
     import netCDF4
 
     out = {}
-    with netCDF4.Dataset("inmemory.nc", memory=blob) as nc:
+    with netCDF4.Dataset(path) as nc:
         nc.set_auto_maskandscale(True)
         lat = np.squeeze(_array(_find(nc, ds.lat_path)))
         levels = np.squeeze(_array(_find(nc, ds.lev_path))) if ds.lev_path else np.array(ds.levels, float)
