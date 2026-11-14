@@ -12,6 +12,7 @@ Method, in plain words:
 
 from __future__ import annotations
 
+import warnings
 from functools import lru_cache
 
 import numpy as np
@@ -32,7 +33,8 @@ def deseasonalize(values: np.ndarray, month_of_year: np.ndarray, relative: bool 
         sel = month_of_year == m
         if not sel.any():
             continue
-        with np.errstate(invalid="ignore"):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)      # cells with no data at all
             clim = np.nanmean(values[sel], axis=0)
         if relative:
             with np.errstate(divide="ignore", invalid="ignore"):
@@ -143,3 +145,47 @@ def flip_pressure(slope_by_level: np.ndarray, levels_hpa: np.ndarray) -> float:
             frac = a / (a - b)
             return float(np.exp(lp[k] + frac * (lp[k + 1] - lp[k])))
     return float("nan")
+
+
+def jump_check(anom: np.ndarray, starts, ends, window: int = 24, min_valid: int = 12):
+    """Does the series jump at a known data-source change?
+
+    anom[time, ...] is monthly and contiguous (gaps are NaN). starts/ends are index
+    ranges of the documented changes. For every month k the "shift" is the mean of
+    the next `window` months minus the mean of the previous `window` months.
+
+    Returns (step, usual): the largest shift inside any change window (signed), and
+    the 97.5th percentile of |shift| at all other times, i.e. how big a two-year
+    shift normally gets in this series. Shapes follow anom[0].
+    """
+    y = np.asarray(anom, dtype=float)
+    n = y.shape[0]
+    ok = np.isfinite(y)
+    zero = np.zeros((1,) + y.shape[1:])
+    csum = np.concatenate([zero, np.cumsum(np.where(ok, y, 0.0), axis=0)])
+    ccnt = np.concatenate([zero, np.cumsum(ok, axis=0)])
+    shift = np.full(y.shape, np.nan)
+    for k in range(1, n):
+        a0, b1 = max(0, k - window), min(n, k + window)
+        nb, na = ccnt[k] - ccnt[a0], ccnt[b1] - ccnt[k]
+        with np.errstate(invalid="ignore", divide="ignore"):
+            d = (csum[b1] - csum[k]) / na - (csum[k] - csum[a0]) / nb
+        shift[k] = np.where((nb >= min_valid) & (na >= min_valid), d, np.nan)
+
+    near = np.zeros(n, dtype=bool)
+    step = np.zeros(y.shape[1:])
+    for s0, e0 in zip(starts, ends):
+        lo, hi = max(1, s0), min(n - 1, e0 + 1)
+        if lo > hi:
+            continue
+        near[max(0, lo - window):min(n, hi + window + 1)] = True
+        seg = shift[lo:hi + 1]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            idx = np.nanargmax(np.where(np.isfinite(seg), np.abs(seg), -1.0), axis=0)
+        cand = np.take_along_axis(seg, idx[None], axis=0)[0]
+        step = np.where(np.abs(np.nan_to_num(cand)) > np.abs(step), np.nan_to_num(cand), step)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        usual = np.nanpercentile(np.abs(shift[~near]), 97.5, axis=0) if (~near).sum() > window else np.full(y.shape[1:], np.inf)
+    return step, usual

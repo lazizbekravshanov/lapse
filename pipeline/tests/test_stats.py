@@ -95,3 +95,14 @@ def test_flip_pressure():
     assert np.isnan(stats.flip_pressure(np.abs(slope), levels))
     # order of levels must not matter
     assert np.isclose(stats.flip_pressure(slope[::-1], levels[::-1]), flip)
+
+
+def test_jump_check_finds_a_planted_step():
+    rng = np.random.default_rng(5)
+    n = 360
+    y = np.stack([ar1(rng, n, 0.5) * 0.3, ar1(rng, n, 0.5) * 0.3], axis=1)
+    y[200:, 0] += 2.0                                       # a fake jump at month 200 in column 0
+    y[50:60, 1] = np.nan                                    # gaps are fine
+    step, usual = stats.jump_check(y, [198], [203])
+    assert 1.6 < step[0] < 2.4 and step[0] > usual[0]
+    assert abs(step[1]) < usual[1] * 1.5 and abs(step[1]) < 0.6

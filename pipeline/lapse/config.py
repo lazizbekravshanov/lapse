@@ -47,6 +47,9 @@ class Variable:
     source_names: tuple          # DAP4 path(s) in the NASA file, e.g. "/T"; averaged if several
     scale: float = 1.0           # multiply raw values by this
     relative: bool = False       # True: anomalies in % of the monthly normal
+    units_plain: str = ""        # units in everyday words, e.g. "°C"
+    min_hpa: float = 0.0         # levels above this height (lower pressure) are not assessed
+    limit_note: str = ""         # why, in plain words
     explain: str = ""            # one-sentence definition for non-experts
 
 
@@ -71,15 +74,20 @@ class Dataset:
 
 
 T = Variable(
-    id="t", label="Air temperature", units="K", source_names=("/T",),
+    id="t", label="Air temperature", units="K", units_plain="°C", source_names=("/T",),
     explain="How warm the air is at that height.",
 )
 QV = Variable(
-    id="qv", label="Water vapor", units="%", source_names=("/QV",), relative=True,
+    id="qv", label="Water vapor", units="%", units_plain="%", source_names=("/QV",), relative=True,
     explain="How much water vapor the air holds, compared with normal for that month.",
+    # MERRA-2 pulls water vapor above the weather layer toward a fixed yearly cycle,
+    # so it cannot show real change there.
+    min_hpa=100.0,
+    limit_note="Only shown up to about 16 km. Higher up, this dataset holds water vapor close to a "
+               "fixed yearly cycle, so it cannot show real change there.",
 )
 O3 = Variable(
-    id="o3", label="Ozone", units="%", source_names=("/O3",), relative=True,
+    id="o3", label="Ozone", units="%", units_plain="%", source_names=("/O3",), relative=True,
     explain="How much ozone the air holds, compared with normal for that month.",
 )
 
@@ -113,7 +121,7 @@ DATASETS = {
         # Day (ascending) and night (descending) passes are averaged.
         variables=(
             Variable(
-                id="t", label="Air temperature", units="K",
+                id="t", label="Air temperature", units="K", units_plain="°C",
                 source_names=("/ascending/Data_Fields/Temperature_A",
                               "/descending/Data_Fields/Temperature_D"),
                 explain=T.explain,
@@ -137,7 +145,7 @@ DATASETS = {
 # Periods to compute trends over. None means "as far as the data goes".
 PERIODS = {
     "full": {"label": "Full record", "start": None, "end": None},
-    "airs_era": {"label": "Since Sept 2002 (both datasets)", "start": "2002-09", "end": None},
+    "airs_era": {"label": "Since 2002 (both datasets)", "start": "2002-09", "end": None},
 }
 
 # Events that can fake or hide a trend. "exclude" events can be masked out.
@@ -148,14 +156,14 @@ EVENTS = [
         "explain": "Volcanic dust warmed the stratosphere for about two years.",
     },
     {
-        "id": "obs1998", "label": "New microwave sounders enter MERRA-2", "start": "1998-07",
-        "end": "1998-12", "kind": "data_change",
+        "id": "obs1998", "label": "New satellite sounders enter MERRA-2", "start": "1998-07",
+        "end": "1998-12", "kind": "data_change", "datasets": ["merra2"],
         "explain": "The reanalysis started using a new satellite type. Jumps here "
                    "can be the data source, not the atmosphere.",
     },
     {
         "id": "obs2004", "label": "Aura satellite data enter MERRA-2", "start": "2004-08",
-        "end": "2004-12", "kind": "data_change",
+        "end": "2004-12", "kind": "data_change", "datasets": ["merra2"],
         "explain": "Ozone and upper-level temperature inputs changed.",
     },
     {
@@ -176,3 +184,50 @@ MASKS = {
 ALPHA = 0.05          # significance level
 FDR_Q = 0.05          # false discovery rate across the whole curtain
 MIN_MONTHS = 60       # skip cells with fewer valid months than this
+
+# Regions: area-weighted averages of latitude bands. "global" must stay first.
+REGIONS = [
+    {"id": "global", "label": "Whole globe", "lat": [-90, 90], "phrase": "Averaged over the whole globe"},
+    {"id": "arctic", "label": "Arctic", "lat": [60, 90], "phrase": "In the Arctic (60°N to the North Pole)"},
+    {"id": "north_mid", "label": "Northern middle latitudes", "lat": [30, 60], "phrase": "In the northern middle latitudes (30°N to 60°N)"},
+    {"id": "tropics", "label": "Tropics", "lat": [-30, 30], "phrase": "In the tropics (30°S to 30°N)"},
+    {"id": "south_mid", "label": "Southern middle latitudes", "lat": [-60, -30], "phrase": "In the southern middle latitudes (30°S to 60°S)"},
+    {"id": "antarctic", "label": "Antarctic", "lat": [-90, -60], "phrase": "In the Antarctic (60°S to the South Pole)"},
+]
+
+# The mask used to ask "does this trend depend on volcano months?"
+EVENT_CHECK_MASK = "no_volcano"
+EVENT_CHANGE_LIMIT = 0.5      # a trend that changes by more than half is event-sensitive
+
+# The four labels. Words here are the words on the site.
+VERDICTS = [
+    {"code": 0, "id": "not_proven", "label": "Not proven yet",
+     "meaning": "The change is too small or too irregular to tell apart from chance. "
+                "This does not mean nothing changed."},
+    {"code": 1, "id": "likely", "label": "Likely change",
+     "meaning": "This dataset shows a change too consistent to be chance, and nothing contradicts it, "
+                "but a second dataset has not fully confirmed it."},
+    {"code": 2, "id": "clear", "label": "Clear change",
+     "meaning": "Two independent datasets both show a change too consistent to be chance, "
+                "in the same direction and of similar size."},
+    {"code": 3, "id": "disputed", "label": "Disputed",
+     "meaning": "The evidence conflicts: the second dataset shows the opposite, the result depends "
+                "on a few volcano months, or the record jumps when its data source changed."},
+]
+
+REASONS = [
+    {"code": 0, "id": "fails_test", "text": "The change does not pass the test."},
+    {"code": 1, "id": "both_agree", "text": "Both datasets pass the test, in the same direction, with overlapping ranges."},
+    {"code": 2, "id": "witness_agrees_weakly", "text": "The second dataset points the same way but does not pass the test."},
+    {"code": 3, "id": "witness_unsure", "text": "The second dataset cannot confirm it."},
+    {"code": 4, "id": "no_witness", "text": "There is no second dataset at this height or for these years."},
+    {"code": 5, "id": "size_differs", "text": "Both datasets agree on the direction but not on the size."},
+    {"code": 6, "id": "opposite_sign", "text": "The second dataset shows a proven change in the opposite direction."},
+    {"code": 7, "id": "event_sensitive", "text": "The result changes a lot when volcano months are left out."},
+    {"code": 8, "id": "data_change", "text": "The record jumps at a moment when the data source changed, and the jump explains much of the trend."},
+    {"code": 9, "id": "witness_jumps", "text": "The second dataset jumps at a data-source change here, so it cannot confirm."},
+]
+
+# A jump at a documented data-source change makes a trend "Disputed" when it is
+# both unusual for the series and at least this share of the total change.
+JUMP_SHARE = 0.5

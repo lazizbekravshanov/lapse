@@ -1,0 +1,125 @@
+"""Compare our numbers with published results, on the same years and heights.
+
+Run with `python -m lapse validate`. Writes docs/validation.md and
+web/data/validation.json. Every "ours" number is computed here from the cubes.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import numpy as np
+
+from . import config, export, reduce, stats
+
+CHECKS = [
+    {"id": "pan_upper", "source": "Pan and others, Journal of Climate, 2017",
+     "finding": "Above 6 hPa (about 36 km and higher) the air cooled by 0.65 ± 0.11 K per decade, 2003 to 2012.",
+     "dataset": "airs", "start": "2003-01", "end": "2012-12", "pmin": 0, "pmax": 6,
+     "kind": "value", "value": -0.65, "plus_minus": 0.11},
+    {"id": "pan_lower", "source": "Pan and others, Journal of Climate, 2017",
+     "finding": "Between 60 and 100 hPa (about 16 to 20 km) there was no significant trend, 2003 to 2012.",
+     "dataset": "airs", "start": "2003-01", "end": "2012-12", "pmin": 60, "pmax": 100,
+     "kind": "not_significant"},
+    {"id": "jpl_low", "source": "NASA JPL, AIRS temperature trends, 2021",
+     "finding": "A warming trend in the lowest part of the atmosphere, 2002 to 2020.",
+     "dataset": "airs", "start": "2002-09", "end": "2020-12", "pmin": 700, "pmax": 1000,
+     "kind": "sign", "sign": 1},
+    {"id": "jpl_high", "source": "NASA JPL, AIRS temperature trends, 2021",
+     "finding": "A strong cooling trend in the upper stratosphere, 2002 to 2020.",
+     "dataset": "airs", "start": "2002-09", "end": "2020-12", "pmin": 0, "pmax": 3,
+     "kind": "sign", "sign": -1},
+    {"id": "santer", "source": "Santer and others, PNAS, 2023",
+     "finding": "The layer 25 to 50 km up cooled by 1 to 2 °C in total over 1986 to 2022.",
+     "dataset": "merra2", "start": "1986-01", "end": "2022-12", "pmin": 1, "pmax": 30,
+     "kind": "total_range", "low": -2.0, "high": -1.0},
+]
+
+
+def layer_trend(check: dict, zonal_dir: Path | None = None):
+    """Global mean of a layer over the given years -> trend dict, or None if no cube."""
+    path = reduce.cube_path(check["dataset"], "t", zonal_dir)
+    if not path.exists():
+        return None
+    cube = reduce.read_cube(path)
+    time = cube["time"].values.astype("datetime64[M]")
+    levels = np.round(cube["level"].values.astype(float), 4)
+    anom = stats.deseasonalize(cube["value"].values, reduce.month_of_year(time))
+    glob = export.region_series(anom, export.region_weights()["global"])            # [time, level]
+    pick = (levels >= check["pmin"]) & (levels <= check["pmax"])
+    layer = glob[:, pick].mean(axis=1)             # simple average of our levels in the layer
+    keep = (time >= np.datetime64(check["start"], "M")) & (time <= np.datetime64(check["end"], "M"))
+    res = stats.trend(layer[keep], reduce.month_index(time)[keep], alpha=config.ALPHA)
+    res["decades"] = keep.sum() / 120.0
+    res["levels"] = [float(x) for x in levels[pick]]
+    return res
+
+
+def judge(check: dict, res: dict) -> str:
+    s, lo, hi, p = res["slope"], res["lo"], res["hi"], res["p"]
+    proven = p < config.ALPHA
+    if check["kind"] == "value":
+        a, b = check["value"] - check["plus_minus"], check["value"] + check["plus_minus"]
+        if lo <= b and a <= hi:
+            return "Yes. The ranges overlap."
+        return "Same direction, different size." if np.sign(s) == np.sign(check["value"]) else "No."
+    if check["kind"] == "not_significant":
+        return "Yes. Ours is not proven either." if not proven else "No. Ours passes the test."
+    if check["kind"] == "sign":
+        if np.sign(s) != check["sign"]:
+            return "No."
+        return "Yes." if proven else "Same direction, but not proven in our test."
+    total = s * res["decades"]
+    if check["low"] <= total <= check["high"]:
+        return "Yes. Our total is inside the published range."
+    return "Same direction, different size." if total < 0 else "No."
+
+
+def run(zonal_dir: Path | None = None, docs_dir: Path | None = None, web_dir: Path | None = None) -> list:
+    rows = []
+    for check in CHECKS:
+        res = layer_trend(check, zonal_dir)
+        if res is None or not np.isfinite(res["slope"]):
+            continue
+        ours = f"{res['slope']:+.2f} K per decade (range {res['lo']:+.2f} to {res['hi']:+.2f})"
+        if check["kind"] == "total_range":
+            ours += f", which is {res['slope'] * res['decades']:+.1f} °C in total"
+        rows.append({
+            "id": check["id"], "source": check["source"], "finding": check["finding"],
+            "dataset": config.DATASETS[check["dataset"]].label, "years": f"{check['start']} to {check['end']}",
+            "levels_hpa": res["levels"], "ours": ours, "p": round(res["p"], 4), "match": judge(check, res),
+        })
+
+    lines = [
+        "# Validation",
+        "",
+        "Do our numbers agree with published science? Each row uses the same years and the",
+        "same heights as the published result. Generated by `python -m lapse validate`.",
+        "",
+        "| Published finding | Source | Our data | Our number | Match |",
+        "|---|---|---|---|---|",
+    ]
+    for r in rows:
+        lines.append(f"| {r['finding']} | {r['source']} | {r['dataset']}, {r['years']} | {r['ours']} | {r['match']} |")
+    lines += [
+        "",
+        "## How to read this",
+        "",
+        "- Our layer value is a simple average of the pressure levels we have inside the layer.",
+        "  Published studies weight heights the way each satellite instrument sees them, so",
+        "  small differences in size are expected.",
+        "- The Santer comparison uses MERRA-2, a model corrected by measurements. Lapse's own",
+        "  jump check flags MERRA-2 above about 40 km, so treat that row with care.",
+        "- Trends: Theil-Sen slope. Test: Mann-Kendall with a correction for month-to-month memory.",
+        "",
+    ]
+    docs = docs_dir or (config.ROOT / "docs")
+    docs.mkdir(parents=True, exist_ok=True)
+    (docs / "validation.md").write_text("\n".join(lines))
+    web = web_dir or config.WEB_DATA_DIR
+    web.mkdir(parents=True, exist_ok=True)
+    (web / "validation.json").write_text(json.dumps({"rows": rows}, separators=(",", ":")))
+    for r in rows:
+        print(f"  {r['id']:10s} {r['ours']:62s} {r['match']}")
+    return rows

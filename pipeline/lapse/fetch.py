@@ -228,6 +228,7 @@ def _reduce_file(path: str, ds: config.Dataset, variables) -> dict:
         nc.set_auto_maskandscale(True)
         lat = np.squeeze(_array(_find(nc, ds.lat_path)))
         levels = np.squeeze(_array(_find(nc, ds.lev_path))) if ds.lev_path else np.array(ds.levels, float)
+        levels = np.round(levels, 4)                 # stored as 32-bit: 0.30000001 -> 0.3
         if levels.size != ds.shape[0]:
             raise ValueError(f"expected {ds.shape[0]} levels, got {levels.size}")
         for var in variables:
