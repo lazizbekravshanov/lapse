@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Raw and intermediate science data (regenerate with the pipeline)
+data/cache/
+data/zonal/*.nc
+!data/zonal/.gitkeep
+
+# Credentials: never commit Earthdata logins
+.netrc
+_netrc
+.env
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
+node_modules/

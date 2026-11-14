@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lapse: trends in the atmosphere, by height</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>Lapse</h1>
+      <p>What is changing in the atmosphere, at which height, and is it real?</p>
+    </div>
+    <div id="banner" class="banner" hidden></div>
+  </header>
+
+  <section class="cases" aria-label="Demo cases">
+    <span>Start with a case:</span>
+    <button data-case="fingerprint">One cause, opposite trends</button>
+    <button data-case="hunga">A volcano in the record</button>
+    <button data-case="witness">When the data source jumps</button>
+  </section>
+
+  <section class="controls" aria-label="Controls">
+    <label>Data <select id="dataset"></select></label>
+    <label>Measure <select id="variable"></select></label>
+    <label>Period <select id="period"></select></label>
+    <label>Months used <select id="mask"></select></label>
+    <label class="check"><input type="checkbox" id="witness"> Compare with the other dataset</label>
+    <button id="globe" class="ghost">Whole globe</button>
+  </section>
+  <p id="explain" class="explain"></p>
+
+  <main>
+    <figure class="panel curtain">
+      <figcaption>
+        <strong>The curtain.</strong> South Pole on the left, North Pole on the right, ground at the
+        bottom, edge of space at the top. Colour is the trend. Faded, hatched cells did not pass the test.
+        Click anywhere to open that latitude.
+      </figcaption>
+      <canvas id="curtain" width="900" height="520"></canvas>
+      <div class="legend"><span id="legmin"></span><i></i><span id="legmax"></span></div>
+    </figure>
+
+    <figure class="panel profile">
+      <figcaption><strong id="profileTitle">Profile</strong>. Trend at each height, with its uncertainty band.
+        Filled dots passed the test. Click a height to see its history.</figcaption>
+      <canvas id="profile" width="420" height="520"></canvas>
+    </figure>
+
+    <figure class="panel series">
+      <figcaption><strong id="seriesTitle">History</strong>. Each dot is one month compared with what is normal
+        for that month. The thick line is the 12-month average. Shaded bands are known events.</figcaption>
+      <canvas id="series" width="1340" height="300"></canvas>
+    </figure>
+  </main>
+
+  <section class="verdict">
+    <h2>Verdict</h2>
+    <p id="verdict"></p>
+  </section>
+
+  <footer>
+    <p id="method"></p>
+    <p>Built for the 2026 NASA Space Apps Challenge, "Be An Earth System Trend Detective!". Not affiliated with NASA.</p>
+  </footer>
+
+  <div id="tip" class="tip" hidden></div>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

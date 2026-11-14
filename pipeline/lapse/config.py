@@ -1,0 +1,163 @@
+"""Everything that is a choice lives here: datasets, variables, bands, periods, events.
+
+Change this file, not the code, when a dataset name or a variable turns out different.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
+
+import numpy as np
+
+# Repo layout -----------------------------------------------------------------
+ROOT = Path(__file__).resolve().parents[2]
+CACHE_DIR = ROOT / "data" / "cache"   # one small file per dataset/month (gitignored)
+ZONAL_DIR = ROOT / "data" / "zonal"   # one cube per dataset/variable (gitignored)
+WEB_DATA_DIR = ROOT / "web" / "data"  # what the website reads (committed)
+
+# Latitude bands --------------------------------------------------------------
+LAT_STEP = 5.0
+LAT_EDGES = np.arange(-90.0, 90.0 + LAT_STEP, LAT_STEP)
+LAT_CENTERS = (LAT_EDGES[:-1] + LAT_EDGES[1:]) / 2.0
+
+# Pressure levels (hPa). Real data brings its own levels; these are used by the
+# synthetic generator and match the documented level sets of each product.
+MERRA2_LEVELS = [
+    1000, 975, 950, 925, 900, 875, 850, 825, 800, 775, 750, 725, 700, 650, 600,
+    550, 500, 450, 400, 350, 300, 250, 200, 150, 100, 70, 50, 40, 30, 20, 10,
+    7, 5, 4, 3, 2, 1, 0.7, 0.5, 0.4, 0.3, 0.1,
+]
+AIRS_LEVELS = [
+    1000, 925, 850, 700, 600, 500, 400, 300, 250, 200, 150, 100, 70, 50, 30,
+    20, 15, 10, 7, 5, 3, 2, 1.5, 1,
+]
+
+
+def approx_altitude_km(p_hpa):
+    """Rough height for a pressure level, for labels only (7 km scale height)."""
+    return 7.0 * np.log(1000.0 / np.asarray(p_hpa, dtype=float))
+
+
+@dataclass(frozen=True)
+class Variable:
+    id: str                      # short id used in file names
+    label: str                   # plain-language name shown to users
+    units: str                   # units of the anomaly series
+    source_names: tuple          # variable name(s) in the NASA file; averaged if several
+    scale: float = 1.0           # multiply raw values by this
+    relative: bool = False       # True: anomalies in % of the monthly normal
+    explain: str = ""            # one-sentence definition for non-experts
+
+
+@dataclass(frozen=True)
+class Dataset:
+    id: str
+    label: str
+    kind: str                    # "reanalysis" or "satellite"
+    short_name: str              # NASA collection short name
+    version: str
+    start: str                   # first month, "YYYY-MM"
+    levels: tuple
+    variables: tuple
+    lat_dim: str = "lat"
+    lon_dim: str = "lon"
+    lev_dim: str = "lev"
+    month_regex: str = r"(\d{4})(\d{2})\.nc4"   # finds YYYY and MM in a file name
+    note: str = ""
+
+
+T = Variable(
+    id="t", label="Air temperature", units="K", source_names=("T",),
+    explain="How warm the air is at that height.",
+)
+QV = Variable(
+    id="qv", label="Water vapor", units="%", source_names=("QV",), relative=True,
+    explain="How much water vapor the air holds, compared with normal for that month.",
+)
+O3 = Variable(
+    id="o3", label="Ozone", units="%", source_names=("O3",), relative=True,
+    explain="How much ozone the air holds, compared with normal for that month.",
+)
+
+DATASETS = {
+    "merra2": Dataset(
+        id="merra2",
+        label="MERRA-2 (NASA reanalysis)",
+        kind="reanalysis",
+        short_name="M2IMNPASM",
+        version="5.12.4",
+        start="1980-01",
+        levels=tuple(MERRA2_LEVELS),
+        variables=(T, QV, O3),
+        note="A model blended with observations. Long record, but the satellites "
+             "feeding it changed over time, which can create fake jumps high up.",
+    ),
+    "airs": Dataset(
+        id="airs",
+        label="AIRS (NASA Aqua satellite)",
+        kind="satellite",
+        short_name="AIRS3STM",
+        version="7.0",
+        start="2002-09",
+        levels=tuple(AIRS_LEVELS),
+        # Day (ascending) and night (descending) passes are averaged.
+        variables=(
+            Variable(
+                id="t", label="Air temperature", units="K",
+                source_names=("Temperature_A", "Temperature_D"),
+                explain=T.explain,
+            ),
+        ),
+        # UNVERIFIED: check these three names with `lapse inspect airs`.
+        lat_dim="Latitude",
+        lon_dim="Longitude",
+        lev_dim="StdPressureLev",
+        month_regex=r"AIRS\.(\d{4})\.(\d{2})\.",
+        note="One instrument measuring from orbit since 2002. Shorter record, "
+             "independent of the reanalysis model.",
+    ),
+}
+
+# Periods to compute trends over. None means "as far as the data goes".
+PERIODS = {
+    "full": {"label": "Full record", "start": None, "end": None},
+    "airs_era": {"label": "Since Sept 2002 (both datasets)", "start": "2002-09", "end": None},
+}
+
+# Events that can fake or hide a trend. "exclude" events can be masked out.
+EVENTS = [
+    {
+        "id": "pinatubo", "label": "Pinatubo eruption", "start": "1991-06", "end": "1993-12",
+        "kind": "volcano",
+        "explain": "Volcanic dust warmed the stratosphere for about two years.",
+    },
+    {
+        "id": "obs1998", "label": "New microwave sounders enter MERRA-2", "start": "1998-07",
+        "end": "1998-12", "kind": "data_change",
+        "explain": "The reanalysis started using a new satellite type. Jumps here "
+                   "can be the data source, not the atmosphere.",
+    },
+    {
+        "id": "obs2004", "label": "Aura satellite data enter MERRA-2", "start": "2004-08",
+        "end": "2004-12", "kind": "data_change",
+        "explain": "Ozone and upper-level temperature inputs changed.",
+    },
+    {
+        "id": "hunga", "label": "Hunga eruption water vapor", "start": "2022-01",
+        "end": "2023-12", "kind": "volcano",
+        "explain": "An undersea volcano put a record amount of water vapor into the "
+                   "stratosphere, which cooled it for about two years.",
+    },
+]
+
+# Masks: named sets of events whose months are dropped before the trend test.
+MASKS = {
+    "none": {"label": "All months", "exclude": []},
+    "no_hunga": {"label": "Without Hunga (2022-2023)", "exclude": ["hunga"]},
+    "no_volcano": {"label": "Without volcanoes", "exclude": ["pinatubo", "hunga"]},
+}
+
+ALPHA = 0.05          # significance level
+FDR_Q = 0.05          # false discovery rate across the whole curtain
+MIN_MONTHS = 60       # skip cells with fewer valid months than this
