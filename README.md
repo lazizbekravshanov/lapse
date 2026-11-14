@@ -11,28 +11,49 @@ One cause, opposite trends, in the same column of air.
 Built for the 2026 NASA Space Apps Challenge, "Be An Earth System Trend Detective!".
 Not affiliated with NASA.
 
-> **Status:** the pipeline, statistics and website run end to end on **synthetic** data.
-> The NASA catalog search and the download request format are tested. The logged-in
-> download has not been run yet. The site shows a banner whenever the data on screen
-> is synthetic.
+> **Status:** running on real NASA data. AIRS: 289 months, 2002 to 2026. MERRA-2: 560 of 561
+> months, 1980 to 2026. No synthetic data is on the site.
+
+## What the data says
+
+Averaged over the whole globe, AIRS satellite record, 2002 to 2026:
+
+| Height | Change per ten years | Label |
+|---|---|---|
+| About 1 km | +0.24 °C | Clear change |
+| About 8 km | +0.27 °C | Clear change |
+| About 21 km | -0.07 °C | Not proven yet |
+| About 32 km | -0.59 °C | Clear change |
+
+The direction flips at about 19 km. Our upper-level cooling for 2003 to 2012 is -0.65 K per
+decade; the published value for the same years and heights is -0.65 ± 0.11
+([docs/validation.md](docs/validation.md)).
 
 ## What you see
 
-| View | Question it answers |
+| Part | Question it answers |
 |---|---|
-| **Curtain** | Where is it changing? Latitude left to right, height bottom to top, colour is the trend. Hatched cells did not pass the test. The dashed line is where warming turns into cooling. |
-| **Profile** | How much, at each height? Trend with its uncertainty band for one latitude or the whole globe. |
-| **History** | What happened month by month? The series behind any one point, with known events shaded. |
-| **Verdict** | One plain sentence built only from the computed numbers. |
+| **The short answer** | One plain paragraph built only from the computed numbers. |
+| **The whole atmosphere at once** | Where is it changing? South Pole to North Pole, ground to the edge of space. Colour is the direction and speed. Texture is the label. |
+| **Every height** | How much, at each height, with the range the true value very likely lies in, and a second dataset as a dashed line. |
+| **Month by month** | The history behind any one point, with volcanoes and data-source changes shaded. |
+| **Case files** | Three guided demos: one cause with opposite trends, a volcano in the record, a jump in the data source. |
+| **Opposite trends** | A list of places where one part of the air rises while another falls. |
 
-Extra checks: compare two independent datasets, and leave out volcano months to see
-if a trend survives.
+## The four labels
+
+| Label | Rule |
+|---|---|
+| **Clear change** | Two independent datasets both pass the test, same direction, overlapping ranges. |
+| **Likely change** | One dataset passes the test and nothing contradicts it. |
+| **Not proven yet** | The change cannot be told apart from chance. This is not "no change". |
+| **Disputed** | The second dataset proves the opposite, the trend depends on volcano months, or the record jumps when its data source changed. |
 
 ## Quick start
 
 ```bash
 make setup     # install
-make test      # 15 tests
+make test      # 32 tests
 make demo      # synthetic data -> web/data  (about a minute)
 make serve     # http://localhost:8000
 ```
@@ -52,6 +73,7 @@ python -m lapse fetch airs --start 2024-01 --end 2024-03    # small test first
 python -m lapse fetch airs                  # 289 months
 python -m lapse fetch merra2                # 561 months, the long one
 python -m lapse export
+python -m lapse validate                    # compare with published results
 ```
 
 Downloads are resumable: every month is cached, so rerunning continues where it stopped.
@@ -66,27 +88,35 @@ Downloads are resumable: every month is cached, so rerunning continues where it 
 1. Remove the seasonal cycle: each month minus that calendar month's average.
 2. **Slope:** Theil-Sen, the median slope over every pair of months.
 3. **Significance:** Mann-Kendall, with the variance widened for month-to-month memory.
-4. **Many cells at once:** Benjamini-Hochberg false discovery rate of 0.05 over the curtain.
-5. "Not significant" is shown as **not proven**, never as "no change".
+4. **Many cells at once:** Benjamini-Hochberg false discovery rate of 0.05.
+5. **Second dataset:** AIRS and MERRA-2 are compared wherever they share years and heights.
+6. **Volcano check:** every trend is recomputed without the months after big eruptions.
+7. **Jump check:** at documented data-source changes, the two-year shift is compared with
+   every other two-year shift in the record.
+8. One of four labels is assigned by rule in `pipeline/lapse/verdict.py`.
 
-All statistics live in `pipeline/lapse/stats.py` and are tested in `pipeline/tests/`.
+All statistics live in `pipeline/lapse/` and are tested in `pipeline/tests/`.
 The website does no statistics of its own.
 
 ## Layout
 
 ```
-pipeline/lapse/config.py     datasets, variables, periods, events (edit this first)
+pipeline/lapse/config.py     datasets, variables, regions, events, label words (edit this first)
 pipeline/lapse/fetch.py      NASA catalog + OPeNDAP download -> monthly cache -> zonal cubes
-pipeline/lapse/synthetic.py  fake cubes for building and testing
-pipeline/lapse/stats.py      trend, significance, false discovery rate
-pipeline/lapse/export.py     cubes -> web/data JSON
+pipeline/lapse/stats.py      trend, significance, false discovery rate, jump check
+pipeline/lapse/verdict.py    the four-label rules
+pipeline/lapse/export.py     cubes -> web/data JSON (trends, regions, labels, opposite pairs)
+pipeline/lapse/validate.py   our numbers against published results
+pipeline/lapse/synthetic.py  fake cubes, for development and tests only
 web/                         static site, no build step
-docs/                        data contract, weekend plan, prior art
+web/content/glossary.json    the plain words, landmarks and layer names
+docs/                        execution plan, data contract, validation, submission, pitch
 ```
 
 ## Limits
 
 - Latitude bands are averages around the whole globe, so east-west differences are hidden.
-- Reanalysis data can jump when its input satellites change, most of all above 10 hPa.
+- MERRA-2 jumps when its input satellites change, most of all above about 40 km. The jump check flags it.
+- MERRA-2 water vapor is only shown up to about 16 km.
 - Heights in km are approximate conversions from pressure.
 - A trend line describes the record. It does not say the change is steady or will continue.

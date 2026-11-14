@@ -8,6 +8,40 @@ the task is called done. Do the tasks in order. Commit after every task.
 
 ---
 
+## Status: Saturday 14 Nov, early morning
+
+| Task | State | Note |
+|---|---|---|
+| T1 Real AIRS on the site | Done | 289 months, no gaps |
+| T2 MERRA-2 and the second-dataset check | Done | 560 of 561 months. June 1998 failed to download; rerun `python -m lapse fetch merra2` once to fill it |
+| T3 Verdict ladder | Done | Rules refined after seeing real data, see T3 |
+| T4 Plain-language layer | Done | Words live in `web/content/glossary.json` and `pipeline/lapse/config.py` |
+| T5 Guided start | Done | Three questions, shareable address for every view |
+| T6 Case files and validation | Done | `docs/validation.md`, five published results checked |
+| T7 Methods page | Done | `web/methods.html` |
+| T8 Deploy | Workflow written | **Owner:** Settings > Pages > Source: GitHub Actions |
+| T9 Submission pack | Drafted | `docs/submission.md`, `docs/pitch.md`. Video is the owner's |
+| T10 User tests | Open | Needs three people. Sheet in `docs/user-tests.md` |
+| T11 Opposite-pair finder | Done | Listed under the charts |
+| T12 Phone layout and keyboard | Done | One column under 860 px, arrow keys on both charts |
+| T13, T14 | Not started | Stretch only |
+
+### What the real data showed
+
+- **AIRS, whole globe, 2002 to 2026:** warming of +0.24 °C per ten years near 1 km and +0.27 near 8 km,
+  cooling of -0.59 near 32 km. The direction flips at about 19 km. Of 24 heights: 12 "Clear change",
+  7 "Likely change", 5 "Not proven yet", 0 "Disputed".
+- **Both datasets agree** on warming below about 10 km and cooling from about 25 km to 32 km.
+- **Our number matches the literature:** above 6 hPa, 2003 to 2012, we get -0.65 K per decade.
+  The published value is -0.65 ± 0.11.
+- **MERRA-2 jumps high up.** At about 41 km its record drops 2.7 °C in one step when its data source
+  changed in 2004. The jump check labels those heights "Disputed" without being told where to look.
+- **The 2022 volcano does not explain the cooling.** In the southern middle latitudes at 32 km the trend
+  moves from -0.77 to -0.70 without the Hunga months.
+- **Water vapor** is shown only up to about 16 km, because MERRA-2 cannot show real change above that.
+
+---
+
 ## 0. Mission
 
 Lapse answers one question for people with no science background:
@@ -175,14 +209,18 @@ export when MERRA-2 lands. Nothing else waits on it.
 **Files:** `pipeline/lapse/verdict.py` (new), `pipeline/lapse/export.py`,
 `pipeline/tests/test_verdict.py` (new), `docs/data-contract.md`, `web/src/*`
 
-**Rules** (A is the dataset on screen, B is the other dataset, same period)
+**Rules** (A is the dataset on screen, B is the second dataset over the same years)
 
 | Code | Label | Rule |
 |---|---|---|
-| 2 | Clear change | A passes the test. B passes with the same sign. Sign and result stay the same with volcano months left out. |
-| 1 | Likely change | A passes and is stable without volcano months, and B either has the same sign without passing, or has no data at this height. |
-| 3 | Disputed | A passes, but B passes with the opposite sign, or the two ranges do not overlap, or A's sign or result flips when volcano months are left out. |
-| 0 | Not proven | A does not pass the test. |
+| 2 | Clear change | A passes the test. B passes with the same sign, and the two ranges overlap. |
+| 1 | Likely change | A passes and nothing contradicts it: B agrees in sign without passing, or B cannot tell, or B has no data here, or B agrees in direction but not in size, or B itself jumps at a data-source change. |
+| 3 | Disputed | B passes with the opposite sign. Or A changes by more than half (or flips) when volcano months are left out. Or A's record jumps at a data-source change, the jump is unusual for the series, and it explains at least half the total change. |
+| 0 | Not proven yet | A does not pass the test. |
+
+Changed from the first draft after seeing real data: a disagreement about size alone is
+"Likely", not "Disputed", and the data-source jump rule was added because MERRA-2 jumps by
+several degrees above 40 km.
 
 **Steps**
 1. Write `verdict.py` as a pure function over arrays. No file access inside it.
@@ -201,7 +239,7 @@ export when MERRA-2 lands. Nothing else waits on it.
 
 **Goal:** a visitor never needs to know what hPa, Kelvin or an anomaly is.
 
-**Files:** `web/data/glossary.json` (new, hand-written), `web/src/*`, `web/index.html`
+**Files:** `web/content/glossary.json` (hand-written, outside the generated folder), `web/src/*`, `web/index.html`
 
 **Steps**
 1. Height axis shows km first, hPa second in small text.
@@ -210,7 +248,7 @@ export when MERRA-2 lands. Nothing else waits on it.
 3. Name the two layers in words on the curtain: "the weather layer" and "the calm
    layer above it", with the science names beside them.
 4. Show the total change over the record next to the per-decade rate.
-5. Tooltip on every term, read from `glossary.json`.
+5. A "Words we use" section on every page, read from `glossary.json`.
 
 **Glossary (use these words everywhere)**
 
@@ -263,14 +301,9 @@ export when MERRA-2 lands. Nothing else waits on it.
 | A volcano in the record | Did the 2022 eruption cause the cooling? | The history chart with and without the Hunga months |
 | When the data source jumps | Can a trend be fake? | A MERRA-2 upper level where the series steps at 1998 or 2004, and AIRS for comparison |
 
-**Validation table** (fill with our numbers once computed)
-
-| Published finding | Source | Our number | Match |
-|---|---|---|---|
-| Upper stratosphere above 6 hPa cooled 0.65 ± 0.11 K per decade, 2003 to 2012 | Pan et al. 2017 | AIRS 3 hPa: -0.80, 1 hPa: -0.63 (2002 to 2026) | Same sign and size. Different years. |
-| Lowest stratosphere, 60 to 100 hPa: no significant trend | Pan et al. 2017 | AIRS 70 hPa: +0.03, not proven | Yes |
-| Warming in the lower troposphere, strong cooling in the upper stratosphere | JPL AIRS, 2002 to 2020 | See section 2 | Yes |
-| The 25 to 50 km layer cooled 1 to 2 °C over 1986 to 2022 | Santer et al. 2023 | To compute from MERRA-2 | Pending |
+**Validation table:** generated by `python -m lapse validate` into `docs/validation.md`.
+Five published results are checked on the same years and heights. Four match. The fifth
+(a layer total from MERRA-2) has the same direction and a larger size.
 
 **Checks**
 - [ ] Every case runs start to finish by clicking "Next" only.
