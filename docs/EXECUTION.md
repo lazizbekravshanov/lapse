@@ -56,6 +56,17 @@ The project is now organised as backend -> hub -> frontend (see `docs/architectu
 | Adapters for Claude and OpenAI-style servers | Written. Not yet run against a live model |
 | 85 tests | Pass |
 
+### Added late Saturday: new front page, ask box, Vercel
+
+| Piece | State |
+|---|---|
+| Front page rebuilt around the finding: headline, three figures, the sky column | Done |
+| Light, minimal style on both pages | Done |
+| Ask box on the site (`api/ask.py`, same harness and number guard) | Done. Checked locally in a browser, rule mode |
+| Gemini preset (`GEMINI_API_KEY`, default `gemini-2.5-flash`) | Written. Not yet run against the live API |
+| `vercel.json` | Written. Not yet deployed: the owner has to import the repo on Vercel |
+| 87 tests | Pass |
+
 Open for the owner: run the agent once with a real model key; fill June 1998
 (`python -m lapse fetch merra2 && python -m lapse export`).
 

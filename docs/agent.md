@@ -59,6 +59,7 @@ never printed, logged or written to a file.
 | To use | Set | Model id |
 |---|---|---|
 | Claude | `ANTHROPIC_API_KEY` | `LAPSE_MODEL` (default `claude-sonnet-5-5`) |
+| Gemini (has a free tier) | `GEMINI_API_KEY` | `LAPSE_MODEL` (default `gemini-2.5-flash`) |
 | Any model on OpenRouter | `OPENROUTER_API_KEY` | `LAPSE_MODEL` (required) |
 | OpenAI | `OPENAI_API_KEY` | `LAPSE_MODEL` (required) |
 | A local or other OpenAI-compatible server | `LAPSE_BASE_URL` (and `LAPSE_API_KEY` if needed) | `LAPSE_MODEL` (required) |
@@ -72,6 +73,19 @@ python -m lapse agent --model rules "..."  # force the no-model planner
 The model writes the sentences. It does not supply the facts. If the model is
 unreachable or the key is wrong, the planner answers instead and a note says so, so a
 demo cannot fail because of a network.
+
+## On the website
+
+The front page has an "ask the data" box. It posts the question to `api/ask.py`, a small
+server function that runs this same harness, so the key never reaches the browser.
+
+- Hosting: Vercel reads `vercel.json` (static site from `web/`, one Python function).
+  Add `GEMINI_API_KEY` under the project's Environment Variables, then redeploy.
+- No key, a wrong key or a used-up free quota: the rule-based answer is shown and a note
+  says so. The page never breaks.
+- Limits: 300 characters a question, 12 questions a minute per visitor.
+- Locally: `python -m lapse serve` runs the site and the ask box on one port.
+- On a plain file host such as GitHub Pages there is no server, so the box hides itself.
 
 ## What the agent can and cannot do
 

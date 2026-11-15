@@ -99,7 +99,7 @@ make test      # 85 tests
 make verify    # recompute every published number from data/zonal and compare
 make ask       # talk to the agent (no API key needed)
 make demo      # synthetic data -> web/data  (about a minute)
-make serve     # http://localhost:8000
+make serve     # the site with its ask box, http://localhost:8000
 ```
 
 ## Real NASA data
