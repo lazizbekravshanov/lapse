@@ -2,7 +2,10 @@ import json
 
 import numpy as np
 
-from lapse import config, export, reduce, synthetic
+from lapse import config
+from lapse.backend.actions import export
+from lapse.backend.data import cubes as reduce
+from lapse.backend.data import synthetic
 
 
 def test_demo_round_trip(tmp_path, monkeypatch):
@@ -76,7 +79,7 @@ def test_lat_bands_weights_and_fill():
 
 
 def test_validation_table_from_synthetic_cubes(tmp_path):
-    from lapse import validate
+    from lapse.backend.actions import validate
 
     zonal = tmp_path / "zonal"
     synthetic.generate(zonal)

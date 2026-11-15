@@ -11,7 +11,10 @@ from pathlib import Path
 
 import numpy as np
 
-from . import config, export, reduce, stats
+from ... import config
+from ..data import cubes
+from ..operations import stats
+from . import export
 
 CHECKS = [
     {"id": "pan_upper", "source": "Pan and others, Journal of Climate, 2017",
@@ -39,18 +42,18 @@ CHECKS = [
 
 def layer_trend(check: dict, zonal_dir: Path | None = None):
     """Global mean of a layer over the given years -> trend dict, or None if no cube."""
-    path = reduce.cube_path(check["dataset"], "t", zonal_dir)
+    path = cubes.cube_path(check["dataset"], "t", zonal_dir)
     if not path.exists():
         return None
-    cube = reduce.read_cube(path)
+    cube = cubes.read_cube(path)
     time = cube["time"].values.astype("datetime64[M]")
     levels = np.round(cube["level"].values.astype(float), 4)
-    anom = stats.deseasonalize(cube["value"].values, reduce.month_of_year(time))
+    anom = stats.deseasonalize(cube["value"].values, cubes.month_of_year(time))
     glob = export.region_series(anom, export.region_weights()["global"])            # [time, level]
     pick = (levels >= check["pmin"]) & (levels <= check["pmax"])
     layer = glob[:, pick].mean(axis=1)             # simple average of our levels in the layer
     keep = (time >= np.datetime64(check["start"], "M")) & (time <= np.datetime64(check["end"], "M"))
-    res = stats.trend(layer[keep], reduce.month_index(time)[keep], alpha=config.ALPHA)
+    res = stats.trend(layer[keep], cubes.month_index(time)[keep], alpha=config.ALPHA)
     res["decades"] = keep.sum() / 120.0
     res["levels"] = [float(x) for x in levels[pick]]
     return res

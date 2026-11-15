@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from . import config
+from ... import config
 
 NOT_PROVEN, LIKELY, CLEAR, DISPUTED = 0, 1, 2, 3
 R = {r["id"]: r["code"] for r in config.REASONS}

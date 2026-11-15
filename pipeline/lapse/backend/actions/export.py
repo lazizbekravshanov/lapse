@@ -14,7 +14,9 @@ from pathlib import Path
 
 import numpy as np
 
-from . import config, reduce, stats, verdict
+from ... import config
+from ..data import cubes
+from ..operations import stats, verdict
 
 SCHEMA = 2
 GENERATED = ("trend", "series", "pairs", "agreement")     # folders this module owns
@@ -207,17 +209,17 @@ def run(zonal_dir: Path | None = None, out_dir: Path | None = None, verbose: boo
     for ds in config.DATASETS.values():
         entry = None
         for var in ds.variables:
-            path = reduce.cube_path(ds.id, var.id, zonal_dir)
+            path = cubes.cube_path(ds.id, var.id, zonal_dir)
             if not path.exists():
                 if verbose:
                     print(f"  skip {ds.id}/{var.id}: {path.name} not found")
                 continue
-            cube = reduce.read_cube(path)
+            cube = cubes.read_cube(path)
             any_synth |= cube.attrs.get("synthetic") == "true"
             time = cube["time"].values.astype("datetime64[M]")
             levels = np.round(cube["level"].values.astype(float), 4)    # 0.30000001 -> 0.3
-            tidx = reduce.month_index(time)
-            anom = stats.deseasonalize(cube["value"].values, reduce.month_of_year(time), var.relative)
+            tidx = cubes.month_index(time)
+            anom = stats.deseasonalize(cube["value"].values, cubes.month_of_year(time), var.relative)
             anom[:, levels < var.min_hpa, :] = np.nan          # heights this variable cannot be trusted at
             regional = {rid: region_series(anom, w) for rid, w in weights.items()}
 

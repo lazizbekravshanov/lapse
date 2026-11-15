@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-from . import config
+from ... import config
 
 
 def clean(a: np.ndarray) -> np.ndarray:

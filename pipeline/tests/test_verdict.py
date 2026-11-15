@@ -1,6 +1,6 @@
 import numpy as np
 
-from lapse import verdict as V
+from lapse.backend.operations import verdict as V
 
 
 def g(slope, sig, half=0.1):

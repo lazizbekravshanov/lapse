@@ -35,28 +35,28 @@ def main(argv=None) -> None:
     args = ap.parse_args(argv)
 
     if args.cmd in ("synth", "demo"):
-        from . import reduce, synthetic
+        from .backend.data import cubes, synthetic
         real = [f.name for f in config.ZONAL_DIR.glob("*.nc")
-                if reduce.read_cube(f).attrs.get("synthetic") != "true"]
+                if cubes.read_cube(f).attrs.get("synthetic") != "true"]
         if real and not args.force:
             raise SystemExit("Real NASA data is in data/zonal (" + ", ".join(sorted(real)) + ").\n"
                              "Synthetic data would replace it and the site. Add --force if you mean it.")
         for path in synthetic.generate():
             print(f"  wrote {path.name} (synthetic)")
     if args.cmd in ("export", "demo"):
-        from . import export
+        from .backend.actions import export
         export.run()
     if args.cmd == "validate":
-        from . import validate
+        from .backend.actions import validate
         validate.run()
     if args.cmd == "inspect":
-        from . import fetch
+        from .backend.data import fetch
         fetch.inspect(args.dataset)
     if args.cmd == "fetch":
-        from . import fetch
+        from .backend.data import fetch
         fetch.fetch(args.dataset, args.start, args.end, args.stride, args.workers)
     if args.cmd == "assemble":
-        from . import fetch
+        from .backend.data import fetch
         fetch.assemble(args.dataset)
 
 

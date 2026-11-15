@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from . import config, reduce
+from ... import config
+from . import cubes
 
 END_MONTH = "2026-09"
 
@@ -55,7 +56,7 @@ def _nature_t(rng, time, levels, lat):
     p = np.asarray(levels, dtype=float)[None, :, None]
     la = np.asarray(lat, dtype=float)[None, None, :]
     tt = (np.arange(nt) / 120.0)[:, None, None]                 # decades
-    moy = reduce.month_of_year(time)[:, None, None]
+    moy = cubes.month_of_year(time)[:, None, None]
 
     z = config.approx_altitude_km(p)
     base = np.where(z < 11, 288.0 - 6.5 * z, np.where(z < 20, 216.5, 216.5 + 2.2 * (z - 20)))
@@ -99,7 +100,7 @@ def _relative_field(rng, time, levels, lat, kind):
     p = np.asarray(levels, dtype=float)[None, :, None]
     la = np.asarray(lat, dtype=float)[None, None, :]
     tt = (np.arange(nt) / 120.0)[:, None, None]
-    moy = reduce.month_of_year(time)[:, None, None]
+    moy = cubes.month_of_year(time)[:, None, None]
     if kind == "qv":
         base = 1e-2 * (p / 1000.0) ** 3 * np.cos(np.deg2rad(la)) ** 2 + 3e-6
         trend_pct = np.where(p >= 200, 1.5, 0.3)
@@ -143,7 +144,7 @@ def generate(zonal_dir=None, seed: int = 7) -> list:
                     vals = vals + 0.7 * (time >= np.datetime64("2004-08"))[:, None, None] * (p <= 3)
             else:
                 vals = _relative_field(rng, time, ds.levels, lat, var.id)
-            path = reduce.cube_path(ds.id, var.id, zonal_dir)
-            reduce.write_cube(path, vals, time, ds.levels, attrs)
+            path = cubes.cube_path(ds.id, var.id, zonal_dir)
+            cubes.write_cube(path, vals, time, ds.levels, attrs)
             written.append(path)
     return written

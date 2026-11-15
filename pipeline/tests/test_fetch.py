@@ -1,4 +1,5 @@
-from lapse import config, fetch
+from lapse import config
+from lapse.backend.data import fetch
 
 
 def test_constraint_merra2():

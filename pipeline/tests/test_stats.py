@@ -1,6 +1,6 @@
 import numpy as np
 
-from lapse import stats
+from lapse.backend.operations import stats
 
 
 def ar1(rng, n, phi):

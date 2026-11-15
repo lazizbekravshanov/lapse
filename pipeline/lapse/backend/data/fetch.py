@@ -31,7 +31,8 @@ from pathlib import Path
 
 import numpy as np
 
-from . import config, reduce
+from ... import config
+from . import cubes
 
 CMR = "https://cmr.earthdata.nasa.gov/search"
 
@@ -139,7 +140,7 @@ def _find(nc, path: str):
 
 
 def _array(var) -> np.ndarray:
-    return reduce.clean(np.ma.filled(np.ma.masked_invalid(var[:]).astype(float), np.nan))
+    return cubes.clean(np.ma.filled(np.ma.masked_invalid(var[:]).astype(float), np.nan))
 
 
 HELP_REFUSED = """NASA refused the request (HTTP {code}).
@@ -236,7 +237,7 @@ def _reduce_file(path: str, ds: config.Dataset, variables) -> dict:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", RuntimeWarning)      # all-missing cells are fine
                 field = np.nanmean(np.stack(fields), axis=0)        # [level, lat, lon]
-            out[var.id] = reduce.zonal_bands(field, lat)
+            out[var.id] = cubes.zonal_bands(field, lat)
     out["levels"] = levels
     return out
 
@@ -332,8 +333,8 @@ def assemble(dataset_id: str, cache_dir: Path | None = None, zonal_dir: Path | N
         cube = np.full((time.size, levels.size, len(config.LAT_CENTERS)), np.nan)
         for f, m in zip(files, months):
             cube[int((m - time[0]).astype(int))] = np.load(f)["bands"]
-        path = reduce.cube_path(ds.id, var.id, zonal_dir)
-        reduce.write_cube(path, cube, time, levels,
+        path = cubes.cube_path(ds.id, var.id, zonal_dir)
+        cubes.write_cube(path, cube, time, levels,
                           {"synthetic": "false", "source": f"{ds.short_name} v{ds.version}"})
         print(f"  wrote {path.name}: {time.size} months, {levels.size} levels")
         written.append(path)
