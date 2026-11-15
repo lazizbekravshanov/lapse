@@ -42,10 +42,17 @@ only if a tool result states it.
 5. If a tool reports a limit or says there are no measurements, say so plainly.
 6. If the question has nothing to do with these records (what they show, how they were measured and \
 checked, or the words used to describe them), reply with exactly: OUT_OF_SCOPE
+7. To compare two places, compare them at the same height: call compare_places, or give the same km in \
+every call. If the question names no height, choose one (0 for near the ground, 30 for the upper air) and \
+state the height the tool reports. Never set a rate at one height against a rate at another as if they \
+were the same thing.
 
 Style: the direct answer first. Short sentences and everyday words, as if to a curious 14-year-old. \
 Heights in km. Every rate with its units and its range. Two to five sentences unless asked for more. \
 No headings."""
+
+PROD = ("You have read the data. Now answer the question in two to five short sentences, using only numbers "
+        "that appear in the tool results.")
 
 NUDGE = ("You answered without reading any data. If this is about how the atmosphere is changing, call a "
          "tool now. If it is not, reply with exactly: OUT_OF_SCOPE")
@@ -113,7 +120,7 @@ def _sources(steps: list) -> list:
 def _loop(question: str, model, site: tools.Site, max_steps: int, max_repairs: int) -> Result:
     specs = tools.specs(site)
     messages = [{"role": "user", "text": question}]
-    steps, notes, repairs, nudged = [], [], 0, False
+    steps, notes, repairs, nudged, prodded = [], [], 0, False, False
     label = getattr(model, "label", model.name)
 
     def done(answer, answered, checked):
@@ -148,8 +155,13 @@ def _loop(question: str, model, site: tools.Site, max_steps: int, max_repairs: i
             nudged = True
             messages += [{"role": "assistant", "text": draft, "raw": reply.raw}, {"role": "user", "text": NUDGE}]
             continue
-        if not draft:
-            break
+        if not draft:                                   # some models go quiet after reading: ask once more
+            if prodded:
+                notes.append("The model read the data but wrote nothing.")
+                break
+            prodded = True
+            messages.append({"role": "user", "text": PROD})
+            continue
         problems = guard.check(draft, question, [s.result for s in good])
         if not problems:
             return done(draft, True, True)

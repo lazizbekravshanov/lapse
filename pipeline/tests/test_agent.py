@@ -124,6 +124,18 @@ def test_harness_rejects_an_invented_number_and_asks_for_a_rewrite(data):
     assert repair["role"] == "user" and "9.87" in repair["text"] and "cannot be shown" in repair["text"]
 
 
+def test_a_model_that_goes_quiet_after_reading_is_asked_once_more(data):
+    model = Scripted([Reply(calls=[Call("a", "trend_at", {"km": 45})]), Reply(text=""), quote_rate])
+    result = harness.run("How is the air changing 45 km up?", model, data)
+    assert result.answered and result.checked and "tools' own wording" not in " ".join(result.notes)
+    assert model.seen[-1][-1] == {"role": "user", "text": harness.PROD}
+
+    silent = Scripted([Reply(calls=[Call("a", "trend_at", {"km": 45})]), Reply(text=""), Reply(text="")])
+    result = harness.run("How is the air changing 45 km up?", silent, data)
+    assert result.answered and result.checked                   # the tools' own sentences, still checked
+    assert "wrote nothing" in " ".join(result.notes)
+
+
 def test_harness_falls_back_to_the_tools_own_words_when_the_model_keeps_inventing(data):
     model = Scripted([Reply(calls=[Call("a", "trend_at", {"km": 45})])] + [Reply(text="Cooling by 9.87 degrees.")] * 3)
     out = harness.run("What is happening 45 km up?", model, data)
