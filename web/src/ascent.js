@@ -2,13 +2,14 @@
 // The altitude, the reading and the colour of the page follow the scroll position.
 // It only reads numbers the pipeline computed; it computes none.
 import { color, kmOf, fmt, VERDICT } from "./draw.js";
+import { iconFor, iconSvg } from "./sky.js";
 
 const PHRASE = { "Mount Everest": "As high as Mount Everest.", "Airliners cruise": "Where airliners cruise.", "Ozone layer": "Inside the ozone layer.",
   "Weather balloons pop": "Where weather balloons pop.", "Highest skydive": "As high as the highest skydive." };
 const START = 0.06, END = 0.94;
 
 export function initAscent({ section, stage, play, get, onSettle }) {
-  const $ = (id) => document.getElementById(id);
+  const $ = (id) => document.getElementById(id), sky = $("sky");
   let raf = 0, timer = 0, auto = 0, level = -1, shown = -1;
   const rail = $("rail"), rgb = (v, max) => color(v, max, 1).match(/\d+/g).slice(0, 3).join(" ");
 
@@ -50,7 +51,10 @@ export function initAscent({ section, stage, play, get, onSettle }) {
     $("altKm").textContent = Math.round(at);
     const mark = d.content.landmarks.find((m) => Math.abs(m.km - at) < 1.6);
     const layer = d.content.layers.find((l) => at >= l.from_km && at < l.to_km);
-    $("altWhere").textContent = at < 1 ? "Where we live." : mark ? (PHRASE[mark.label] ?? mark.label + ".") : layer ? layer.plain + "." : "";
+    const where = at < 1 ? "Where we live." : mark ? (PHRASE[mark.label] ?? mark.label + ".") : layer ? layer.plain + "." : "";
+    const icon = at < 1 ? "home" : mark ? iconFor(mark.label) : null;
+    if ($("altWhere").dataset.is !== where) { $("altWhere").dataset.is = where; $("altWhere").innerHTML = (icon ? iconSvg(icon) : "") + where; }
+    for (const g of sky.querySelectorAll(".lm")) g.classList.toggle("on", Math.abs(Number(g.dataset.km) - at) < 1.6);
     const rate = $("altRate"), w = d.words;
     if (s == null || v == null) { rate.className = "rate"; rate.textContent = "No measurements here."; $("altLabel").hidden = true; $("altSay").textContent = d.variable.limit_note || ""; return; }
     rate.className = "rate " + (proven ? (s > 0 ? "up" : "down") : "");
@@ -85,7 +89,7 @@ export function initAscent({ section, stage, play, get, onSettle }) {
   });
 
   // Drag the column to scrub through the heights.
-  const sky = $("sky"), jump = (e) => {
+  const jump = (e) => {
     const d = get(), box = sky.querySelector("svg")?.getBoundingClientRect();
     if (!d || !box) return;
     const km = Math.min(d.scale.maxKm, d.scale.kmAt(((e.clientY - box.top) / box.height) * d.scale.viewHeight));

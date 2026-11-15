@@ -58,6 +58,12 @@ button.link { background: none; border: 0; padding: 0; color: var(--ink); text-d
 #sky [data-level] { cursor: inherit; }
 #sky text { font-size: 11px; fill: var(--muted); font-family: inherit; }
 #sky text.strong { fill: var(--ink); font-weight: 600; }
+.ico { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.ico .solid { fill: currentColor; stroke: none; }
+svg.ico { width: 1.2em; height: 1.2em; vertical-align: -0.22em; margin-right: .45em; color: var(--ink); }
+#sky .lm { color: #8e8e93; transition: color .3s; }
+#sky .lm.on { color: var(--ink); }
+#sky .lm.on text { fill: var(--ink); }
 .picked { display: none; }
 .keyrow { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: .78rem; color: var(--muted); }
 .keyrow i { display: inline-block; width: 22px; height: 9px; border-radius: 3px; margin-right: 6px; vertical-align: middle; background: linear-gradient(90deg, var(--cool), #f4f4f5, var(--warm)); }
