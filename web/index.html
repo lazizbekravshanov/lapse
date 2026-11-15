@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lapse: the sky is warming at the bottom and cooling at the top</title>
+  <title>Lapse: warming below, cooling above</title>
   <meta name="description" content="Real NASA measurements of the atmosphere from the ground to the edge of space, with a plain answer and an honest label for every trend.">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="src/style.css">
@@ -15,25 +15,39 @@
   </header>
   <div id="banner" class="banner" hidden></div>
 
-  <div class="wrap">
-    <section id="hero" class="hero" aria-live="polite">
-      <div>
-        <h1 id="lead">Reading NASA's records…</h1>
-        <p id="sub" class="sub"></p>
-        <div id="stats" class="stats"></div>
-        <p id="answer" class="sr"></p>
-        <div class="picks">
-          <div id="pickWhere" class="chips" aria-label="Where"></div>
-          <div id="pickWhat" class="chips" aria-label="What"></div>
+  <section id="ascent" class="ascent" aria-label="The finding, from the ground up">
+    <div id="stage" class="stage" data-phase="intro">
+      <div class="words">
+        <div class="scene intro">
+          <h1 id="lead">Reading NASA's records…</h1>
+          <p id="sub" class="sub"></p>
+          <div class="go"><button type="button" id="play">Play the ascent</button><span class="small">or just scroll</span></div>
+        </div>
+        <div class="scene climb">
+          <p class="eyebrow">Altitude</p>
+          <p class="alt"><span id="altKm">0</span> km</p>
+          <p id="altWhere" class="sub"></p>
+          <p id="altRate" class="rate"></p>
+          <p><em id="altLabel" class="tag"></em></p>
+          <p id="altSay" class="say"></p>
+        </div>
+        <div class="scene top">
+          <p class="eyebrow">The finding</p>
+          <h2 id="topTitle" class="big"></h2>
+          <div id="stats" class="stats"></div>
+          <div class="picks">
+            <div id="pickWhere" class="chips" aria-label="Where"></div>
+            <div id="pickWhat" class="chips" aria-label="What"></div>
+          </div>
+          <p id="source" class="small"></p>
         </div>
       </div>
-      <div class="skybox">
-        <div id="sky"></div>
-        <div id="reading" class="reading"></div>
-        <details class="why"><summary>Why this label</summary><p id="detail"></p></details>
-      </div>
-    </section>
+      <div class="skybox"><div id="sky"></div></div>
+    </div>
+    <p id="answer" class="sr"></p><p id="detail" class="sr"></p>
+  </section>
 
+  <div class="wrap">
     <section id="ask" class="block ask">
       <h2>Ask the data.</h2>
       <p class="lede">It answers only from NASA's records. Every number is checked against them before you see it.</p>
@@ -64,7 +78,7 @@
       <p class="lede">Three views of the same measurements. <span id="tally"></span></p>
       <div class="evidence">
         <figure class="panel curtain">
-          <figcaption><strong>Every latitude, every height.</strong> South Pole to North Pole, ground to space. Click a spot to open it.</figcaption>
+          <figcaption><strong>Every latitude, every height.</strong> South Pole to North Pole, the ground at the bottom. Click a spot to open it.</figcaption>
           <canvas id="curtain" width="1000" height="560" tabindex="0" role="img"></canvas>
           <div class="scale"><span id="legmin"></span><i></i><span id="legmax"></span></div>
           <ul id="legend" class="legend"></ul>

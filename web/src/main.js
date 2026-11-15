@@ -3,15 +3,17 @@ import { drawCurtain } from "./curtain.js";
 import { drawProfile } from "./profile.js";
 import { drawSeries } from "./series.js";
 import { kmOf, hpaOf, fmt, latName } from "./draw.js";
-import { answer, brief, detail, labelOf, placeShort, wordsFor } from "./words.js";
+import { answer, brief, detail, labelOf, reasonOf, placeShort, wordsFor } from "./words.js";
 import { drawSky } from "./sky.js";
 import { initAsk } from "./ask.js";
+import { initAscent } from "./ascent.js";
 import { CASES } from "./cases.js";
 
 const $ = (id) => document.getElementById(id);
 const state = { dataset: null, variable: "t", period: null, mask: "none", method: null, place: { region: "global" }, hpa: 10, witness: true };
 let manifest, catalog, content, live = null;      // live = { def, step } while a case file is open
 let current = {};                        // what the last render loaded
+let ascent = null;
 
 // --- reading the manifest -----------------------------------------------------
 const ds = (id = state.dataset) => manifest.datasets.find((d) => d.id === id);
@@ -181,15 +183,18 @@ async function render() {
   $("answer").textContent = answer({ col, levels: d.levels_hpa, place: state.place, variable: v, manifest });
   const b = brief({ col, levels: d.levels_hpa, place: state.place, variable: v, manifest });
   $("lead").textContent = b.headline;
-  $("sub").textContent = `${v.label}, ${b.where.charAt(0).toLowerCase() + b.where.slice(1)}. ${d.label}, ${trend.span.start.slice(0, 4)} to ${trend.span.end.slice(0, 4)}.`;
+  const top = Math.round(Math.max(...d.levels_hpa.map(kmOf)));
+  $("sub").textContent = `Scroll to rise through ${Math.round(trend.span.years)} years of NASA measurements, from the ground to ${top} km up.`;
+  $("topTitle").textContent = b.up && b.down ? "One sky. Two directions." : b.headline;
+  $("source").textContent = `${v.label}, ${b.where.charAt(0).toLowerCase() + b.where.slice(1)}. ${d.label}, ${trend.span.start.slice(0, 4)} to ${trend.span.end.slice(0, 4)}.`;
   const tile = (t, cls) => (t ? `<div class="stat ${cls}"><b>${fmt(col.slope[t.i])}</b><span>${v.trend_units_plain}</span><span>near ${Math.round(kmOf(d.levels_hpa[t.i]))} km · ${labelOf(manifest, col.verdict[t.i]).toLowerCase()}</span></div>` : "");
   $("stats").innerHTML = tile(b.up, "up") + tile(b.down, "down")
     + (b.flipKm == null ? "" : `<div class="stat"><b>${b.flipKm} km</b><span>where the direction flips</span></div>`);
   $("tally").textContent = b.tally;
-  const here = col.slope[level], kmHere = Math.round(kmOf(hpa));
-  $("reading").innerHTML = here == null || col.verdict[level] == null ? `<b>${kmHere} km</b><span>No measurements at this height.</span>`
-    : `<b>${fmt(here)}</b><span>${v.trend_units_plain} at ${kmHere} km</span><em>${labelOf(manifest, col.verdict[level])}</em>`;
-  drawSky($("sky"), { col, levels: d.levels_hpa, units: v.trend_units_plain, selLevel: level, content, labelOf: (c) => labelOf(manifest, c) });
+  current.scale = drawSky($("sky"), { col, levels: d.levels_hpa, units: v.trend_units_plain, selLevel: null, content,
+    labelOf: (c) => labelOf(manifest, c), compact: window.matchMedia("(max-width: 900px)").matches });
+  current.view = { col, levels: d.levels_hpa, variable: v, content, scale: current.scale, words: wordsFor(v),
+    label: (c) => labelOf(manifest, c), reason: (c) => reasonOf(manifest, c) };
   $("detail").textContent = detail({ col, i: level, levels: d.levels_hpa, variable: v, manifest, years: trend.span.years })
     + ` Tools used: ${d.label}, ${catalog.methods.find((m) => m.id === state.method).label.toLowerCase()} method.`;
   $("curtain").setAttribute("aria-label", `Map of trends by latitude and height. ${$("answer").textContent}`);
@@ -198,6 +203,7 @@ async function render() {
   renderPairs(await loadPairs(d.id, v.id, state.period, state.method).catch(() => null));
   if (live) await renderCase();
   writeUrl();
+  ascent?.update();
 }
 
 function renderPairs(pairs) {
@@ -331,7 +337,7 @@ function bind() {
     closeCase();
     state.place = b.dataset.at.startsWith("lat") ? { lat: Number(b.dataset.at.slice(3)) } : { region: b.dataset.at };
     state.hpa = Number(b.dataset.hpa);
-    render(); $("hero").scrollIntoView({ behavior: "smooth", block: "start" });
+    render().then(() => ascent.toLevel(nearestLevel(state.hpa)));
   });
 
   $("caseButtons").innerHTML = CASES.filter(caseAvailable).map((c) => `<button type="button" data-case="${c.id}">${c.title}</button>`).join("");
@@ -342,7 +348,7 @@ function bind() {
 
   $("pickWhat").addEventListener("click", user((e) => { const b = e.target.closest("[data-id]"); if (b) { state.variable = b.dataset.id; state.dataset = autoDataset(b.dataset.id); state.period = null; } }));
   $("pickWhere").addEventListener("click", user((e) => { const b = e.target.closest("[data-id]"); if (b && b.dataset.id !== "lat") state.place = { region: b.dataset.id }; }));
-  $("sky").addEventListener("click", user((e) => { const b = e.target.closest("[data-level]"); if (b) state.hpa = ds().levels_hpa[Number(b.dataset.level)]; }));
+  $("sky").addEventListener("click", (e) => { const b = e.target.closest("[data-level]"); if (b) ascent.toLevel(Number(b.dataset.level)); });
   let timer;
   window.addEventListener("resize", () => { clearTimeout(timer); timer = setTimeout(render, 120); });
 }
@@ -366,7 +372,7 @@ function showFromAsk(args) {
   normalize();
   const want = args.hpa > 0 ? Number(args.hpa) : args.km != null ? hpaOf(Number(args.km)) : null;
   if (want) state.hpa = ds().levels_hpa[nearestLevel(want)];          // snap to a real measured height
-  render(); $("hero").scrollIntoView({ behavior: "smooth", block: "start" });
+  render().then(() => ascent.toLevel(nearestLevel(state.hpa)));
 }
 
 async function start() {
@@ -386,6 +392,8 @@ async function start() {
   const fromUrl = readUrl();
   if (!fromUrl) state.dataset = manifest.auto.t?.dataset ?? manifest.datasets[0].id;
   bind();
+  ascent = initAscent({ section: $("ascent"), stage: $("stage"), play: $("play"), get: () => current.view,
+    onSettle: (i) => { if (i !== nearestLevel(state.hpa)) { state.hpa = ds().levels_hpa[i]; render(); } } });
   initAsk({ section: $("ask"), form: $("askForm"), input: $("askInput"), button: $("askGo"), out: $("askOut"),
     tryBox: $("askTry"), note: $("askNote"), onShow: showFromAsk });
   window.lapse = { state, render };

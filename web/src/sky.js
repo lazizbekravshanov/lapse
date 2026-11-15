@@ -6,7 +6,7 @@ import { color, kmOf, fmt, VERDICT } from "./draw.js";
 const W = 320, H = 520, X0 = 150, X1 = 226, TOP = 22, BOTTOM = 498;
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-export function drawSky(el, { col, levels, units, selLevel, content, labelOf }) {
+export function drawSky(el, { col, levels, units, selLevel, content, labelOf, compact }) {
   const km = levels.map(kmOf);
   const order = km.map((_, i) => i).sort((a, b) => km[a] - km[b]);                 // ground first
   const topKm = Math.ceil(Math.max(...km) / 10) * 10;
@@ -38,20 +38,21 @@ export function drawSky(el, { col, levels, units, selLevel, content, labelOf }) 
   let marks = "";
   for (const m of content.landmarks) {
     if (m.km > topKm) continue;
+    if (compact) break;
     marks += `<line x1="${X0 - 8}" x2="${X0}" y1="${y(m.km)}" y2="${y(m.km)}" stroke="#a1a1aa"/><text x="${X0 - 12}" y="${y(m.km) + 4}" text-anchor="end">${esc(m.label)}</text>`;
   }
   let flip = "";
   if (col.flip_hpa != null) {
     const fy = y(kmOf(col.flip_hpa));
     flip = `<line x1="${X0 - 8}" x2="${X1 + 8}" y1="${fy}" y2="${fy}" stroke="#0a0a0a" stroke-dasharray="4 3"/>`
-      + `<text class="strong" x="${X0 - 12}" y="${fy - 6}" text-anchor="end">direction flips</text>`;
+      + (compact ? "" : `<text class="strong" x="${X0 - 12}" y="${fy - 6}" text-anchor="end">direction flips</text>`);
   }
-  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Change at every height from the ground to ${topKm} km">
+  el.innerHTML = `<svg viewBox="${compact ? `${X0 - 16} 0 ${X1 - X0 + 84}` : `0 0 ${W}`} ${H}" role="img" aria-label="Change at every height from the ground to ${topKm} km">
     <defs><clipPath id="skyClip"><rect x="${X0}" y="${TOP}" width="${X1 - X0}" height="${BOTTOM - TOP}" rx="12"/></clipPath>
     <pattern id="skyHatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#0a0a0a" stroke-width="1.2"/></pattern></defs>
-    <text x="${(X0 + X1) / 2}" y="12" text-anchor="middle">edge of space</text>
     <g clip-path="url(#skyClip)">${bands}${hatch}</g>
     <rect x="${X0}" y="${TOP}" width="${X1 - X0}" height="${BOTTOM - TOP}" rx="12" fill="none" stroke="#e4e4e7"/>
     ${ticks}${marks}${flip}${sel}
-    <text x="${(X0 + X1) / 2}" y="${H - 6}" text-anchor="middle">where we live</text></svg>`;
+    <g id="skyMark" transform="translate(0 ${BOTTOM})" pointer-events="none"><line x1="${X0 - 14}" x2="${X1 + 6}" y1="0" y2="0" stroke="#1d1d1f" stroke-width="2.5"/><circle cx="${X0 - 14}" cy="0" r="6" fill="#1d1d1f"/></g></svg>`;
+  return { y, topKm, max, maxKm: Math.max(...km) };
 }
