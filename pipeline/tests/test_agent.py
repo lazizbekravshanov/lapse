@@ -440,3 +440,48 @@ def test_the_whole_loop_over_real_http_with_a_stand_in_model_server(data, monkey
     assert "cooling" in out.answer and len(seen) == 2
     assert seen[0][0] == "/v1/chat/completions" and seen[0][1] == "Bearer local-key"
     assert seen[1][2]["messages"][-1]["role"] == "tool" and len(seen[0][2]["tools"]) == 11
+
+
+# --- the website's ask endpoint and the Gemini preset ---------------------------------------------
+
+def test_ask_endpoint_answers_checks_input_and_limits_visitors(data):
+    from lapse.agent import web
+    code, out = web.answer(json.dumps({"question": "Is the Arctic warming?"}).encode(), data, model="rules")
+    assert code == 200 and out["answered"] and out["checked"] and out["sources"]
+    code, out = web.answer(json.dumps({"question": "Capital of France?"}).encode(), data, model="rules")
+    assert code == 200 and not out["answered"]
+    assert web.answer(b"not json", data)[0] == 400 and web.answer(b"{}", data)[0] == 400
+    assert web.answer(json.dumps({"question": "x" * 400}).encode(), data)[0] == 413
+    assert web.answer(b"x" * 5000, data)[0] == 413
+    web._seen.clear()
+    codes = [web.answer(json.dumps({"question": "hello"}).encode(), data, who="1.2.3.4", model="rules")[0]
+             for _ in range(web.PER_MINUTE + 2)]
+    assert codes == [200] * web.PER_MINUTE + [429, 429]
+    assert web.status(data)["ok"] and "key" not in json.dumps(web.status(data)).lower()
+
+
+def test_gemini_preset_sends_a_schema_gemini_accepts_and_returns_its_message_unchanged(data, monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "g-secret")
+    monkeypatch.delenv("LAPSE_MODEL", raising=False)
+    monkeypatch.setenv("LAPSE_BASE_URL", "http://should-be-ignored")
+    sent = []
+    raw = {"role": "assistant", "content": None, "tool_calls": [{"id": "c1", "type": "function", "extra_content": {
+        "google": {"thought_signature": "abc"}}, "function": {"name": "profile", "arguments": "{}"}}]}
+
+    def post(url, headers, json, timeout):
+        sent.append((url, headers, json))
+        return FakeResponse(200, {"choices": [{"message": raw if len(sent) == 1 else {"content": "done"}}]})
+
+    model = models.OpenAICompatible("gemini", post=post)
+    assert model.model == "gemini-2.5-flash" and model.base.startswith("https://generativelanguage.googleapis.com")
+    first = model.step("sys", [{"role": "user", "text": "q"}], tools.specs(data))
+    assert first.raw is raw and sent[0][1]["authorization"] == "Bearer g-secret"
+    fns = [t["function"] for t in sent[0][2]["tools"]]
+    assert "parameters" not in next(f for f in fns if f["name"] == "list_options")      # no empty object
+    assert all("additionalProperties" not in f.get("parameters", {}) for f in fns)
+    history = [{"role": "user", "text": "q"}, {"role": "assistant", "text": "", "calls": first.calls, "raw": first.raw},
+               {"role": "tool", "id": "c1", "name": "profile", "text": "{}", "error": False}]
+    assert model.step("sys", history, tools.specs(data)).text == "done"
+    assert sent[1][2]["messages"][2] is raw                                               # signature goes back intact
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    assert models.pick(None).name == "gemini"

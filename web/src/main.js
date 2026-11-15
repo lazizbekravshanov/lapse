@@ -2,10 +2,11 @@ import { loadManifest, loadCatalog, loadGlossary, setRoutes, loadTrend, loadSeri
 import { drawCurtain } from "./curtain.js";
 import { drawProfile } from "./profile.js";
 import { drawSeries } from "./series.js";
-import { kmOf, fmt, latName } from "./draw.js";
-import { answer, detail, labelOf, placeShort, wordsFor } from "./words.js";
+import { kmOf, hpaOf, fmt, latName } from "./draw.js";
+import { answer, brief, detail, labelOf, placeShort, wordsFor } from "./words.js";
+import { drawSky } from "./sky.js";
+import { initAsk } from "./ask.js";
 import { CASES } from "./cases.js";
-import { initStart } from "./start.js";
 
 const $ = (id) => document.getElementById(id);
 const state = { dataset: null, variable: "t", period: null, mask: "none", method: null, place: { region: "global" }, hpa: 10, witness: true };
@@ -91,6 +92,9 @@ function syncControls() {
   $("witness").checked = state.witness && !!w;
   $("witness").disabled = !w;
   $("witnessLabel").textContent = w ? `Show the second dataset (${ds(w.with_dataset).label})` : "No second dataset for this view";
+  const chip = (id, label, on) => `<button type="button" class="chip" data-id="${id}" aria-pressed="${on}">${label}</button>`;
+  $("pickWhat").innerHTML = variables.map((x) => chip(x.id, x.label, x.id === state.variable)).join("");
+  $("pickWhere").innerHTML = places.map((x) => chip(x.id, x.label, x.id === (state.place.region ?? "lat"))).join("");
   const v = variable();
   $("explain").textContent = `${v.label}: ${v.explain} ${v.limit_note || ""}`;
   renderTools();
@@ -174,6 +178,15 @@ async function render() {
     events, masked: mask.exclude, keep: keepFn(period), units: v.units_plain });
 
   $("answer").textContent = answer({ col, levels: d.levels_hpa, place: state.place, variable: v, manifest });
+  const b = brief({ col, levels: d.levels_hpa, place: state.place, variable: v, manifest });
+  $("lead").innerHTML = `<span>${b.where},</span> ${b.claim}`;
+  const tile = (t, cls) => (t ? `<div class="stat ${cls}"><b>${fmt(col.slope[t.i])}</b><span>${v.trend_units_plain}, strongest ${t.word}<br>near ${Math.round(kmOf(d.levels_hpa[t.i]))} km · ${labelOf(manifest, col.verdict[t.i])}</span></div>` : "");
+  $("stats").innerHTML = tile(b.up, "up") + tile(b.down, "down")
+    + (b.flipKm == null ? "" : `<div class="stat"><b>${b.flipKm} km</b><span>the height where the direction flips</span></div>`);
+  $("tally").textContent = b.tally;
+  $("eyebrow").textContent = `${d.label} · ${trend.span.start.slice(0, 4)} to ${trend.span.end.slice(0, 4)}`;
+  $("skyTitle").textContent = `${v.label}, ${place.toLowerCase()}: ground to space`;
+  drawSky($("sky"), { col, levels: d.levels_hpa, units: v.trend_units_plain, selLevel: level, content, labelOf: (c) => labelOf(manifest, c) });
   $("detail").textContent = detail({ col, i: level, levels: d.levels_hpa, variable: v, manifest, years: trend.span.years })
     + ` Tools used: ${d.label}, ${catalog.methods.find((m) => m.id === state.method).label.toLowerCase()} method.`;
   $("curtain").setAttribute("aria-label", `Map of trends by latitude and height. ${$("answer").textContent}`);
@@ -187,12 +200,13 @@ async function render() {
 function renderPairs(pairs) {
   const d = ds(), v = variable(), w = wordsFor(v), u = v.trend_units_plain, box = $("pairs");
   const km = (hpa) => Math.round(kmOf(hpa));
+  const near = (hpa) => (km(hpa) < 1 ? "near the ground" : `near ${km(hpa)} km`);
   const items = [];
   for (const p of pairs ? pairs.vertical : []) {
     const where = p.where.region ? manifest.regions.find((r) => r.id === p.where.region).label : `Ring at ${latName(manifest.lat_centers[p.where.lat])}`;
     const at = p.where.region ?? "lat" + p.where.lat;
     items.push(`<li><button type="button" class="link" data-at="${at}" data-hpa="${p.high.hpa}">${where}</button>:
-      ${p.low.slope > 0 ? w.up : w.down} ${fmt(p.low.slope)} near ${km(p.low.hpa)} km, ${p.high.slope > 0 ? w.up : w.down} ${fmt(p.high.slope)} near ${km(p.high.hpa)} km</li>`);
+      ${p.low.slope > 0 ? w.up : w.down} ${fmt(p.low.slope)} ${near(p.low.hpa)}, ${p.high.slope > 0 ? w.up : w.down} ${fmt(p.high.slope)} ${near(p.high.hpa)}</li>`);
   }
   for (const p of pairs ? pairs.horizontal.slice(0, 4) : []) {
     const a = latName(manifest.lat_centers[p.a.lat]), b = latName(manifest.lat_centers[p.b.lat]);
@@ -314,7 +328,7 @@ function bind() {
     closeCase();
     state.place = b.dataset.at.startsWith("lat") ? { lat: Number(b.dataset.at.slice(3)) } : { region: b.dataset.at };
     state.hpa = Number(b.dataset.hpa);
-    render(); $("answerCard").scrollIntoView({ behavior: "smooth", block: "start" });
+    render(); $("hero").scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   $("caseButtons").innerHTML = CASES.filter(caseAvailable).map((c) => `<button type="button" data-case="${c.id}">${c.title}</button>`).join("");
@@ -323,33 +337,33 @@ function bind() {
   $("caseBack").addEventListener("click", () => { live.step--; applyStep(); render(); });
   $("caseClose").addEventListener("click", closeCase);
 
-  $("startOpen").addEventListener("click", () => { $("start").hidden = false; $("startOpen").hidden = true; });
+  $("pickWhat").addEventListener("click", user((e) => { const b = e.target.closest("[data-id]"); if (b) { state.variable = b.dataset.id; state.dataset = autoDataset(b.dataset.id); state.period = null; } }));
+  $("pickWhere").addEventListener("click", user((e) => { const b = e.target.closest("[data-id]"); if (b && b.dataset.id !== "lat") state.place = { region: b.dataset.id }; }));
+  $("sky").addEventListener("click", user((e) => { const b = e.target.closest("[data-level]"); if (b) state.hpa = ds().levels_hpa[Number(b.dataset.level)]; }));
   let timer;
   window.addEventListener("resize", () => { clearTimeout(timer); timer = setTimeout(render, 120); });
 }
 
-function showStart(show) { $("start").hidden = !show; $("startOpen").hidden = show; }
-
-function onStart(choice) {
-  showStart(false);
-  if (choice) {
-    closeCase();
-    state.variable = choice.variable; state.dataset = autoDataset(choice.variable); state.period = null;
-    state.place = { region: choice.region }; state.mask = "none";
-    normalize();
-    if (choice.hpa) state.hpa = choice.hpa;
-    else {                                   // "every height": open on the strongest labelled change
-      loadTrend(state.dataset, state.variable, state.period, "none", state.method).then((t) => {
-        const c = t.regions[choice.region], lv = ds().levels_hpa;
-        let best = null;
-        lv.forEach((_, i) => { if (c.verdict[i] >= 1 && c.verdict[i] <= 2 && (best == null || Math.abs(c.slope[i]) > Math.abs(c.slope[best]))) best = i; });
-        if (best != null) state.hpa = lv[best];
-        render();
-      });
-      return;
+// The ask box found something: move every chart to it.
+function showFromAsk(args) {
+  closeCase();
+  if (args.what && manifest.auto[args.what]) { state.variable = args.what; state.dataset = autoDataset(args.what); state.period = null; }
+  if (args.data && args.data !== "auto" && ds(args.data)) { state.dataset = args.data; state.period = null; }
+  if (args.method && args.method !== "auto") state.method = args.method;
+  if (args.where != null) {
+    const where = String(args.where).toLowerCase(), m = where.match(/^(-?\d+(?:\.\d+)?)\s*([ns])?/);
+    if (manifest.regions.some((r) => r.id === where)) state.place = { region: where };
+    else if (m) {
+      const lat = Number(m[1]) * (m[2] === "s" ? -1 : 1);
+      let best = 0;
+      manifest.lat_centers.forEach((c, i) => { if (Math.abs(c - lat) < Math.abs(manifest.lat_centers[best] - lat)) best = i; });
+      state.place = { lat: best };
     }
   }
-  render();
+  normalize();
+  const want = args.hpa > 0 ? Number(args.hpa) : args.km != null ? hpaOf(Number(args.km)) : null;
+  if (want) state.hpa = ds().levels_hpa[nearestLevel(want)];          // snap to a real measured height
+  render(); $("hero").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function start() {
@@ -357,7 +371,7 @@ async function start() {
     [manifest, catalog, content] = await Promise.all([loadManifest(), loadCatalog(), loadGlossary()]);
     setRoutes(catalog.routes);
   } catch (err) {
-    $("answer").textContent = "No data found. Run `python -m lapse export` in the repository first.";
+    $("lead").textContent = "No data found. Run `python -m lapse export` in the repository first.";
     return;
   }
   if (manifest.synthetic) { $("banner").hidden = false; $("banner").textContent = "Synthetic demo data. These are not NASA measurements."; }
@@ -368,9 +382,9 @@ async function start() {
   $("method").textContent = `Every number comes from the tools listed above, with a false discovery rate of ${m.fdr_q}. Heights in km are approximate. Data last processed ${manifest.generated_at.slice(0, 10)}.`;
   const fromUrl = readUrl();
   if (!fromUrl) state.dataset = manifest.auto.t?.dataset ?? manifest.datasets[0].id;
-  initStart($("start"), manifest, onStart);
-  showStart(!fromUrl);
   bind();
+  initAsk({ section: $("ask"), form: $("askForm"), input: $("askInput"), button: $("askGo"), out: $("askOut"),
+    tryBox: $("askTry"), note: $("askNote"), onShow: showFromAsk });
   window.lapse = { state, render };
   await render();
 }

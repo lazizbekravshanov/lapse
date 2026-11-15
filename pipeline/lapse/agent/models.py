@@ -9,6 +9,7 @@ messages is a list of dicts:
 
 Keys are read from the environment and never printed, logged or stored:
     ANTHROPIC_API_KEY      Claude, through the Messages API
+    GEMINI_API_KEY         Gemini, through Google's OpenAI-compatible endpoint (has a free tier)
     OPENROUTER_API_KEY     any model on OpenRouter
     OPENAI_API_KEY         OpenAI
     LAPSE_BASE_URL         any OpenAI-compatible server, e.g. a local one (LAPSE_API_KEY if it needs one)
@@ -133,6 +134,9 @@ def to_openai(system: str, messages: list) -> list:
         if m["role"] == "user":
             out.append({"role": "user", "content": m["text"]})
         elif m["role"] == "assistant":
+            if isinstance(m.get("raw"), dict):                   # the provider's own message, sent back unchanged
+                out.append(m["raw"])                             # (Gemini needs the extra fields it attaches to tool calls)
+                continue
             msg = {"role": "assistant", "content": m.get("text") or None}
             if m.get("calls"):
                 msg["tool_calls"] = [{"id": c.id, "type": "function",
@@ -145,6 +149,7 @@ def to_openai(system: str, messages: list) -> list:
 
 
 PRESETS = {
+    "gemini": ("https://generativelanguage.googleapis.com/v1beta/openai", "GEMINI_API_KEY"),
     "openrouter": ("https://openrouter.ai/api/v1", "OPENROUTER_API_KEY"),
     "openai": ("https://api.openai.com/v1", "OPENAI_API_KEY"),
     "ollama": ("http://localhost:11434/v1", None),
@@ -152,17 +157,29 @@ PRESETS = {
 }
 
 
+DEFAULT_MODELS = {"gemini": "gemini-2.5-flash"}      # on Google's free tier; change with LAPSE_MODEL
+
+
+def _plain_schema(spec: dict) -> dict:
+    """A tool definition some servers (Gemini) accept: no additionalProperties, no empty parameter object."""
+    fn = {"name": spec["name"], "description": spec["description"]}
+    props = spec["parameters"].get("properties") or {}
+    if props:
+        fn["parameters"] = {"type": "object", "properties": props}
+    return fn
+
+
 class OpenAICompatible:
     def __init__(self, preset: str = "custom", model: str | None = None, post=None):
         base, key_name = PRESETS[preset]
         self.name = preset
-        self.base = (os.environ.get("LAPSE_BASE_URL") or base or "").rstrip("/")
+        self.base = (base or os.environ.get("LAPSE_BASE_URL") or "").rstrip("/")
         if not self.base:
             raise ModelError("LAPSE_BASE_URL is not set")
         self.key = os.environ.get(key_name, "") if key_name else ""
         if key_name and not self.key and preset != "custom":
             raise ModelError(f"{key_name} is not set")
-        self.model = model or os.environ.get("LAPSE_MODEL", "")
+        self.model = model or os.environ.get("LAPSE_MODEL") or DEFAULT_MODELS.get(preset, "")
         if not self.model:
             raise ModelError("LAPSE_MODEL is not set. Set it to the id of a model that can call tools")
         self.post = post
@@ -171,8 +188,9 @@ class OpenAICompatible:
     def step(self, system: str, messages: list, specs: list) -> Reply:
         body = {
             "model": self.model, "messages": to_openai(system, messages),
-            "tools": [{"type": "function", "function": {"name": s["name"], "description": s["description"],
-                                                        "parameters": s["parameters"]}} for s in specs],
+            "tools": [{"type": "function", "function": _plain_schema(s) if self.name == "gemini" else
+                       {"name": s["name"], "description": s["description"], "parameters": s["parameters"]}}
+                      for s in specs],
         }
         headers = {"content-type": "application/json"}
         if self.key:
@@ -190,7 +208,7 @@ class OpenAICompatible:
             except json.JSONDecodeError:
                 args = {"_unreadable": fn.get("arguments")}      # the tool layer rejects it and says why
             calls.append(Call(c.get("id") or f"call_{i}", fn.get("name", ""), args if isinstance(args, dict) else {}))
-        return Reply(text=msg.get("content") or "", calls=calls)
+        return Reply(text=msg.get("content") or "", calls=calls, raw=msg if calls else None)
 
 
 # --- a model that follows a script, for tests -----------------------------------------
@@ -219,7 +237,8 @@ def pick(name: str | None = None, site=None):
     if name in ("rules", "none", "off"):
         return Planner(site)
     if name == "auto":
-        for env, choice in (("ANTHROPIC_API_KEY", "anthropic"), ("OPENROUTER_API_KEY", "openrouter"),
+        for env, choice in (("ANTHROPIC_API_KEY", "anthropic"), ("GEMINI_API_KEY", "gemini"),
+                            ("OPENROUTER_API_KEY", "openrouter"),
                             ("OPENAI_API_KEY", "openai"), ("LAPSE_BASE_URL", "custom")):
             if os.environ.get(env):
                 name = choice
@@ -230,4 +249,4 @@ def pick(name: str | None = None, site=None):
         return Anthropic()
     if name in PRESETS:
         return OpenAICompatible(name)
-    raise ModelError(f"Unknown model choice {name!r}. Use auto, rules, anthropic, openrouter, openai, ollama or custom")
+    raise ModelError(f"Unknown model choice {name!r}. Use auto, rules, anthropic, gemini, openrouter, openai, ollama or custom")

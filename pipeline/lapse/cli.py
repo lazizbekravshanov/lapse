@@ -1,4 +1,4 @@
-"""Command line: lapse fetch | assemble | inspect | export | verify | validate | tools | ask | agent | mcp | synth | demo"""
+"""Command line: lapse fetch | assemble | inspect | export | verify | validate | tools | ask | agent | serve | mcp | synth | demo"""
 
 from __future__ import annotations
 
@@ -27,10 +27,12 @@ def main(argv=None) -> None:
     p.add_argument("--months", default="none", help="none, no_hunga or no_volcano")
     p = sub.add_parser("agent", help="ask in your own words; answers come only from the NASA data")
     p.add_argument("question", nargs="*", help="leave empty for a conversation")
-    p.add_argument("--model", help="auto (default), rules, anthropic, openrouter, openai, ollama or custom")
+    p.add_argument("--model", help="auto (default), rules, anthropic, gemini, openrouter, openai, ollama or custom")
     p.add_argument("--steps", action="store_true", help="show every tool call")
     p.add_argument("--json", action="store_true", help="print the full result as JSON")
     sub.add_parser("mcp", help="serve the tools to an MCP client (Claude Desktop, Claude Code) over stdio")
+    p = sub.add_parser("serve", help="the website with its ask box, on http://localhost:8000")
+    p.add_argument("--port", type=int, default=8000)
     p = sub.add_parser("demo", help="synth + export in one go")
     p.add_argument("--force", action="store_true", help="overwrite real NASA cubes")
 
@@ -116,6 +118,9 @@ def main(argv=None) -> None:
                 if not question:
                     break
                 ask(question)
+    if args.cmd == "serve":
+        from .agent import web
+        web.serve(args.port)
     if args.cmd == "mcp":
         from .agent import mcp_server
         mcp_server.serve()

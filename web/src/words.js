@@ -73,3 +73,28 @@ export function detail({ col, i, levels, variable, manifest, years }) {
   const total = `Over the ${years} years of data that adds up to about ${fmt(s * years / 10, 1)} ${variable.units_plain}.`;
   return `${head}: ${label}. ${fmt(s)} ${u}, ${range}. ${total} ${why}`;
 }
+
+// The same facts as answer(), in parts, for the headline and the three tiles.
+export function brief({ col, levels, place, variable, manifest }) {
+  const w = wordsFor(variable), where = placePhrase(place, manifest);
+  const idx = levels.map((_, i) => i).filter((i) => col.slope[i] != null && col.verdict[i] != null);
+  const good = idx.filter((i) => col.verdict[i] === VERDICT.CLEAR || col.verdict[i] === VERDICT.LIKELY);
+  const up = good.filter((i) => col.slope[i] > 0), down = good.filter((i) => col.slope[i] < 0);
+  const strongest = (list) => {
+    const clear = list.filter((i) => col.verdict[i] === VERDICT.CLEAR);
+    return (clear.length ? clear : list).reduce((a, b) => (Math.abs(col.slope[b]) > Math.abs(col.slope[a]) ? b : a));
+  };
+  const mean = (list) => list.reduce((a, i) => a + kmOf(levels[i]), 0) / list.length;
+  const tile = (list, word) => (list.length ? { i: strongest(list), word } : null);
+  let claim;
+  if (!idx.length) claim = "there are no measurements for this.";
+  else if (!good.length) claim = `no height shows a change we can call likely or clear.`;
+  else if (up.length && down.length) claim = mean(up) < mean(down) ? `${w.subject} is ${w.up} low down and ${w.down} higher up.` : `${w.subject} is ${w.down} low down and ${w.up} higher up.`;
+  else claim = `${w.subject} is ${up.length ? w.up : w.down} at every height where the change is proven.`;
+  const count = (code) => idx.filter((i) => col.verdict[i] === code).length;
+  return {
+    where, claim, up: tile(up, w.up), down: tile(down, w.down),
+    flipKm: up.length && down.length && col.flip_hpa != null ? km(col.flip_hpa) : null,
+    tally: idx.length ? `${idx.length} heights checked: ${count(2)} clear, ${count(1)} likely, ${count(0)} not proven yet, ${count(3)} disputed.` : "",
+  };
+}

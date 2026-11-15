@@ -3,127 +3,148 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lapse: what is changing in the air, at which height</title>
+  <title>Lapse: the sky is warming at the bottom and cooling at the top</title>
   <meta name="description" content="Real NASA measurements of the atmosphere from the ground to the edge of space, with a plain answer and an honest label for every trend.">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
-  <header>
-    <div class="brand">
-      <h1>Lapse</h1>
-      <p>What is changing in the air, at which height, and how sure are we?</p>
-    </div>
-    <nav><a href="methods.html">How it works</a> <a href="https://github.com/lazizbekravshanov/lapse">Code</a></nav>
-    <div id="banner" class="banner" hidden></div>
+  <header class="top">
+    <a class="mark" href="./">Lapse</a>
+    <nav><a href="#ask">Ask</a> <a href="#evidence">Evidence</a> <a href="methods.html">How we know</a> <a href="https://github.com/lazizbekravshanov/lapse">Code</a></nav>
   </header>
+  <div id="banner" class="banner" hidden></div>
 
-  <section id="start" class="start" aria-label="Choose what to investigate" hidden></section>
-  <button type="button" id="startOpen" class="link" hidden>Ask a new question</button>
+  <div class="wrap">
+    <section id="hero" class="hero" aria-live="polite">
+      <div>
+        <p class="eyebrow" id="eyebrow">NASA records of the air above us</p>
+        <h1 id="lead">Reading NASA's records…</h1>
+        <div id="stats" class="stats"></div>
+        <p id="tally" class="small"></p>
+        <p id="answer" class="sr"></p>
+        <div class="picks">
+          <div><span>Where</span><div id="pickWhere" class="chips"></div></div>
+          <div><span>What</span><div id="pickWhat" class="chips"></div></div>
+        </div>
+      </div>
+      <div class="skybox">
+        <h3 id="skyTitle">From the ground to the edge of space</h3>
+        <div id="sky"></div>
+        <div class="keyrow"><span><i></i>blue is a fall, red is a rise</span><span>faint: not proven yet</span><span>tap a height</span></div>
+        <p id="detail" class="picked"></p>
+      </div>
+    </section>
 
-  <section class="cases" aria-label="Case files">
-    <span>Or follow a case file:</span>
-    <span id="caseButtons"></span>
-  </section>
-  <section id="case" class="case" aria-live="polite" hidden>
-    <h2 id="caseTitle"></h2>
-    <p id="caseText"></p>
-    <div class="go">
-      <button type="button" id="caseBack" class="ghost">Back</button>
-      <button type="button" id="caseNext">Next</button>
-      <span id="caseCount"></span>
-      <button type="button" id="caseClose" class="link">Close</button>
-    </div>
-  </section>
+    <section id="ask" class="block">
+      <div class="ask">
+        <p class="eyebrow">Ask the data</p>
+        <h2>Ask in your own words.</h2>
+        <p class="lede">The answer comes only from NASA's records. Every number in it is checked against the files it was read from, and you can see which files those were.</p>
+        <form id="askForm"><input id="askInput" type="text" maxlength="300" autocomplete="off" aria-label="Your question" placeholder="Is the Arctic warming?"><button type="submit" id="askGo">Ask</button></form>
+        <div id="askTry" class="chips"></div>
+        <div id="askOut" aria-live="polite" hidden></div>
+        <p id="askNote" class="small" style="margin-top:14px"></p>
+      </div>
+    </section>
 
-  <section id="answerCard" class="answer" aria-live="polite">
-    <h2>The short answer</h2>
-    <p id="answer">Loading NASA data…</p>
-    <h2>At the height you picked</h2>
-    <p id="detail" class="small"></p>
-  </section>
+    <section class="block" aria-label="Case files">
+      <p class="eyebrow">Case files</p>
+      <h2>Three cases, walked through step by step.</h2>
+      <div id="caseButtons"></div>
+      <div id="case" class="case" aria-live="polite" hidden>
+        <h2 id="caseTitle"></h2>
+        <p id="caseText"></p>
+        <div class="go">
+          <button type="button" id="caseBack" class="ghost">Back</button>
+          <button type="button" id="caseNext">Next</button>
+          <span id="caseCount"></span>
+          <button type="button" id="caseClose" class="link">Close</button>
+        </div>
+      </div>
+    </section>
 
-  <section class="controls" aria-label="Change the view">
-    <label>Measure <select id="variable"></select></label>
-    <label>Place <select id="place"></select></label>
-    <label>Years <select id="period"></select></label>
-    <label>Months used <select id="mask"></select></label>
-    <label class="check"><input type="checkbox" id="witness"> <span id="witnessLabel">Show the second dataset</span></label>
-    <button type="button" id="copy" class="ghost">Copy link to this view</button>
-  </section>
-  <p id="explain" class="explain"></p>
+    <section id="evidence" class="block">
+      <p class="eyebrow">The evidence</p>
+      <h2>See it for yourself.</h2>
+      <p class="lede">Three views of the same measurements. Click any of them to move around.</p>
+      <div class="evidence">
+        <figure class="panel curtain">
+          <figcaption><strong>The whole atmosphere at once.</strong> South Pole on the left, North Pole on the right, ground at the bottom, edge of space at the top. Click anywhere to open that ring around the Earth.</figcaption>
+          <canvas id="curtain" width="1000" height="560" tabindex="0" role="img"></canvas>
+          <div class="scale"><span id="legmin"></span><i></i><span id="legmax"></span></div>
+          <ul id="legend" class="legend"></ul>
+          <p class="small" style="margin-top:10px">Dashed line: the height where the direction flips.</p>
+        </figure>
+        <figure class="panel profile">
+          <figcaption><strong id="profileTitle">Every height</strong>. Left of the middle line is a fall, right is a rise. The grey band is the range the true value very likely lies in. <span id="profileNote"></span></figcaption>
+          <canvas id="profile" width="420" height="560" tabindex="0" role="img" aria-label="Trend at every height for the chosen place"></canvas>
+          <ul class="legend dots">
+            <li><i class="dot dot-clear"></i>Clear change</li><li><i class="dot dot-likely"></i>Likely change</li>
+            <li><i class="dot dot-not"></i>Not proven yet</li><li><i class="dot dot-disputed"></i>Disputed</li>
+          </ul>
+        </figure>
+        <figure class="panel series">
+          <figcaption><strong id="seriesTitle">Month by month</strong>. Each dot is one month, compared with what is normal for that month. Dark line: 12-month average. Orange line: the trend. Shaded bands: known events.</figcaption>
+          <canvas id="series" width="1340" height="300" role="img" aria-label="Monthly history at the chosen place and height"></canvas>
+        </figure>
+      </div>
+    </section>
 
-  <section id="tools" class="tools" aria-label="Choose your tools">
-    <div class="tools-head">
-      <h2>The toolbox</h2>
-      <button type="button" id="auto" class="chip" data-tool="auto" aria-pressed="true">Auto</button>
-      <span id="autoNote" class="small"></span>
-    </div>
-    <p class="small">Every data source, method and check Lapse has, in one place. Pick your own or leave it on Auto.
-      Whatever you pick, the same checks run and the answer comes back in the same form.</p>
-    <div class="tool-cols">
-      <div><h3>1. Data source</h3><div id="toolData" class="cards"></div></div>
-      <div><h3>2. Method</h3><div id="toolMethod" class="cards"></div></div>
-      <div><h3>3. Checks, always on</h3><ul id="toolChecks" class="checks"></ul></div>
-    </div>
-    <div class="compare">
-      <h3 id="compareTitle">Does the method change the answer?</h3>
-      <table>
-        <thead><tr><th>Method</th><th>Rate</th><th>Very likely between</th><th>Passes the test</th><th>Label</th></tr></thead>
-        <tbody id="compareRows"></tbody>
-      </table>
-      <p class="small"><span id="compareUnits"></span> <strong id="compareNote"></strong></p>
-      <p class="small">A range can sit just clear of zero and still not pass: many heights are tested at once, so each one is held to a stricter bar.</p>
-    </div>
-  </section>
+    <section id="pairs" class="block pairs" hidden>
+      <p class="eyebrow">Same sky, opposite directions</p>
+      <h2>Where one part of the air rises while another falls.</h2>
+      <ul id="pairList"></ul>
+      <p id="pairUnits" class="small"></p>
+    </section>
 
-  <main>
-    <figure class="panel curtain">
-      <figcaption>
-        <strong>The whole atmosphere at once.</strong> South Pole on the left, North Pole on the right, ground at the
-        bottom, edge of space at the top. Colour shows the direction and speed of change. Click anywhere to open that
-        ring around the Earth, or use the arrow keys.
-      </figcaption>
-      <canvas id="curtain" width="1000" height="560" tabindex="0" role="img"></canvas>
-      <div class="scale"><span id="legmin"></span><i></i><span id="legmax"></span></div>
-      <ul id="legend" class="legend"></ul>
-      <p class="small">Dashed line: the height where the direction flips.</p>
-    </figure>
-
-    <figure class="panel profile">
-      <figcaption><strong id="profileTitle">Every height</strong>. Left of the middle line is a fall, right is a rise.
-        The grey band is the range the true value very likely lies in. Click a dot to see its history.
-        <span id="profileNote"></span></figcaption>
-      <canvas id="profile" width="420" height="560" tabindex="0" role="img" aria-label="Trend at every height for the chosen place"></canvas>
-      <ul class="legend dots">
-        <li><i class="dot dot-clear"></i>Clear change</li><li><i class="dot dot-likely"></i>Likely change</li>
-        <li><i class="dot dot-not"></i>Not proven yet</li><li><i class="dot dot-disputed"></i>Disputed</li>
-      </ul>
-    </figure>
-
-    <figure class="panel series">
-      <figcaption><strong id="seriesTitle">Month by month</strong>. Each dot is one month, compared with what is normal
-        for that month. Dark line: 12-month average. Orange line: the trend. Shaded bands: known events.</figcaption>
-      <canvas id="series" width="1340" height="300" role="img" aria-label="Monthly history at the chosen place and height"></canvas>
-    </figure>
-  </main>
-
-  <section id="pairs" class="pairs" hidden>
-    <h2>Opposite trends found in this data</h2>
-    <p class="small">Places where one part of the air is going up while another is going down. Click one to open it.</p>
-    <ul id="pairList"></ul>
-    <p id="pairUnits" class="small"></p>
-  </section>
-
-  <details class="words">
-    <summary>Words we use</summary>
-    <dl id="glossary"></dl>
-  </details>
+    <section class="block">
+      <details class="fold" id="explore">
+        <summary><span>Investigate it yourself<small>choose the years, the dataset and the method</small></span></summary>
+        <div>
+          <div class="controls" aria-label="Change the view">
+            <label>Measure <select id="variable"></select></label>
+            <label>Place <select id="place"></select></label>
+            <label>Years <select id="period"></select></label>
+            <label>Months used <select id="mask"></select></label>
+            <label class="check"><input type="checkbox" id="witness"> <span id="witnessLabel">Show the second dataset</span></label>
+            <button type="button" id="copy" class="ghost">Copy link to this view</button>
+          </div>
+          <p id="explain" class="explain"></p>
+          <div id="tools" class="tools" aria-label="Choose your tools">
+            <div class="tools-head">
+              <h2 style="font-size:1.15rem">The toolbox</h2>
+              <button type="button" id="auto" class="chip" data-tool="auto" aria-pressed="true">Auto</button>
+              <span id="autoNote" class="small"></span>
+            </div>
+            <p class="small">Every data source, method and check in one place. Whatever you pick, the same checks run and the answer comes back in the same form.</p>
+            <div class="tool-cols">
+              <div><h3>1. Data source</h3><div id="toolData" class="cards"></div></div>
+              <div><h3>2. Method</h3><div id="toolMethod" class="cards"></div></div>
+              <div><h3>3. Checks, always on</h3><ul id="toolChecks" class="checks"></ul></div>
+            </div>
+            <div class="compare">
+              <h3 id="compareTitle" style="text-transform:none;letter-spacing:0;font-size:1rem;color:var(--ink);font-weight:600">Does the method change the answer?</h3>
+              <table>
+                <thead><tr><th>Method</th><th>Rate</th><th>Very likely between</th><th>Passes the test</th><th>Label</th></tr></thead>
+                <tbody id="compareRows"></tbody>
+              </table>
+              <p class="small"><span id="compareUnits"></span> <strong id="compareNote"></strong></p>
+              <p class="small">A range can sit just clear of zero and still not pass: many heights are tested at once, so each one is held to a stricter bar.</p>
+            </div>
+          </div>
+        </div>
+      </details>
+      <details class="fold words" style="margin-top:12px">
+        <summary><span>Words we use</span></summary>
+        <div><dl id="glossary"></dl></div>
+      </details>
+    </section>
+  </div>
 
   <footer>
     <p id="method"></p>
-    <p>Built for the 2026 NASA Space Apps Challenge, "Be An Earth System Trend Detective!". Data: NASA AIRS and MERRA-2.
-      Not affiliated with NASA. <a href="methods.html">How it works and what it cannot tell you</a>.</p>
+    <p>Built for the 2026 NASA Space Apps Challenge, "Be An Earth System Trend Detective!". Data: NASA AIRS and MERRA-2. Not affiliated with NASA. <a href="methods.html">How we know, and what this cannot tell you</a>.</p>
   </footer>
 
   <div id="tip" class="tip" hidden></div>

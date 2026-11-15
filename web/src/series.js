@@ -1,7 +1,7 @@
 import { setup, minus, INK, MUTED, LINE, ACCENT } from "./draw.js";
 import { monthKey } from "./data.js";
 
-const TINT = { volcano: "rgba(200,73,43,.16)", data_change: "rgba(44,90,140,.2)" };
+const TINT = { volcano: "rgba(220,38,38,.12)", data_change: "rgba(37,99,235,.14)" };
 
 // y: one value per month. axis: [{y, m, t}]. keep(t): does this month count for the trend?
 export function drawSeries(canvas, { y, axis, slope, events, masked, keep, units }) {
@@ -33,7 +33,7 @@ export function drawSeries(canvas, { y, axis, slope, events, masked, keep, units
 
   ctx.strokeStyle = LINE; ctx.beginPath(); ctx.moveTo(M.l, yy(0)); ctx.lineTo(w - M.r, yy(0)); ctx.stroke();
   for (const d of pts) {
-    ctx.fillStyle = keep(d.t) ? "rgba(31,42,68,.35)" : "rgba(31,42,68,.12)";
+    ctx.fillStyle = keep(d.t) ? "rgba(10,10,10,.3)" : "rgba(10,10,10,.1)";
     ctx.fillRect(x(d.t) - 1, yy(Math.max(-span, Math.min(span, d.v))) - 1, 2.2, 2.2);
   }
 

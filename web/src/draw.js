@@ -1,6 +1,6 @@
 // Shared drawing helpers.
-export const INK = "#1f2a44", MUTED = "#6b6a66", LINE = "#d9cfbb", ACCENT = "#e2703a", PAPER = "#fbf7ee";
-const COOL = [44, 90, 140], MID = [243, 234, 216], WARM = [200, 73, 43];
+export const INK = "#0a0a0a", MUTED = "#6b7280", LINE = "#e5e7eb", ACCENT = "#ea580c", PAPER = "#ffffff";
+const COOL = [37, 99, 235], MID = [244, 244, 245], WARM = [220, 38, 38];
 export const VERDICT = { NOT_PROVEN: 0, LIKELY: 1, CLEAR: 2, DISPUTED: 3 };
 
 export function color(v, max, alpha = 1) {

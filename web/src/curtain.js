@@ -17,14 +17,14 @@ export function drawCurtain(canvas, { trend, ds, lats, latStep, regions, sel, co
   const groups = { hatch: [], dots: [], cross: [] };
 
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = "#efe7d6"; ctx.fillRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);   // no data
+  ctx.fillStyle = "#f4f4f5"; ctx.fillRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);   // no data
   levels.forEach((p, i) => {
     const [y0, y1] = scale.edges[i];
     lats.forEach((lat, j) => {
       const v = trend.slope[i][j], verdict = trend.verdict[i][j];
       if (v == null || verdict == null) return;
       const rect = [x(lat - latStep / 2), y0, cw + 0.5, y1 - y0 + 0.5];
-      ctx.fillStyle = "#fbf7ee"; ctx.fillRect(...rect);
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(...rect);
       ctx.fillStyle = color(v, max, ALPHA[verdict]); ctx.fillRect(...rect);
       if (verdict === VERDICT.NOT_PROVEN) groups.hatch.push(rect);
       if (verdict === VERDICT.LIKELY) groups.dots.push(rect);
@@ -60,7 +60,7 @@ export function drawCurtain(canvas, { trend, ds, lats, latStep, regions, sel, co
   // Axes.
   heightAxis(ctx, scale, M.l - 6, wide);
   ctx.fillStyle = MUTED; ctx.textAlign = "center"; ctx.textBaseline = "top";
-  for (const lat of wide ? [-90, -60, -30, 0, 30, 60, 90] : [-90, 0, 90]) {
+  for (const lat of wide ? [-90, -45, 0, 45, 90] : [-90, 0, 90]) {
     const label = lat === 0 ? "Equator" : Math.abs(lat) === 90 ? (lat < 0 ? "South Pole" : "North Pole") : `${Math.abs(lat)}°${lat < 0 ? "S" : "N"}`;
     ctx.textAlign = lat === -90 ? "left" : lat === 90 ? "right" : "center";
     ctx.fillText(label, x(lat), h - M.b + 8);

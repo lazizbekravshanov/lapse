@@ -27,5 +27,5 @@ data:         ## real data -> trends -> web/data (needs Earthdata login)
 	python -m lapse export
 	python -m lapse validate
 
-serve:        ## open http://localhost:8000
-	python -m http.server 8000 --directory web
+serve:        ## the site with its ask box, on http://localhost:8000
+	python -m lapse serve

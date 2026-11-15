@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "",
+  "outputDirectory": "web",
+  "functions": {
+    "api/ask.py": {
+      "maxDuration": 60,
+      "includeFiles": "{web/data/**,web/content/**,pipeline/lapse/**}",
+      "excludeFiles": "{data/**,docs/**,pipeline/tests/**,.github/**,web/src/**}"
+    }
+  }
+}

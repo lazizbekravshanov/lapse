@@ -15,7 +15,7 @@ export function drawProfile(canvas, { col, levels, other, otherLevels, units, se
   ctx.strokeStyle = LINE; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(x(0), M.t); ctx.lineTo(x(0), h - M.b); ctx.stroke();
 
-  ctx.fillStyle = "rgba(31,42,68,.13)"; ctx.beginPath();                        // the range
+  ctx.fillStyle = "rgba(10,10,10,.09)"; ctx.beginPath();                        // the range
   ok.forEach((i, k) => { const yy = scale.y(levels[i]); k ? ctx.lineTo(x(col.lo[i]), yy) : ctx.moveTo(x(col.lo[i]), yy); });
   [...ok].reverse().forEach((i) => ctx.lineTo(x(col.hi[i]), scale.y(levels[i])));
   ctx.fill();
@@ -36,7 +36,7 @@ export function drawProfile(canvas, { col, levels, other, otherLevels, units, se
   ok.forEach((i) => {
     const px = x(col.slope[i]), py = scale.y(levels[i]), v = col.verdict[i], r = i === selLevel ? 6 : 3.6;
     ctx.beginPath(); ctx.arc(px, py, r, 0, 6.3);
-    ctx.fillStyle = v === VERDICT.CLEAR ? INK : v === VERDICT.LIKELY ? "#8d93a3" : PAPER; ctx.fill();
+    ctx.fillStyle = v === VERDICT.CLEAR ? INK : v === VERDICT.LIKELY ? "#9ca3af" : PAPER; ctx.fill();
     ctx.strokeStyle = i === selLevel ? ACCENT : INK; ctx.lineWidth = i === selLevel ? 2.5 : 1; ctx.stroke();
     if (v === VERDICT.DISPUTED) {
       ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.beginPath();
