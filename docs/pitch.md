@@ -1,39 +1,49 @@
 # Pitch
 
-## 30 seconds
+## The 30-second demo video
 
-Everyone asks if the planet is warming. The honest answer is: it depends how high
-you look.
+The rules: 30 seconds at most, English subtitles, hosted on an outside site (YouTube, Google
+Drive) with a link anyone can open. A longer video is not eligible for Global Judging.
 
-Lapse reads 24 years of NASA satellite data from the ground to the edge of space.
-Near the ground the air is warming, about a quarter of a degree every ten years.
-Thirty kilometres up it is cooling more than twice as fast. Same planet, same years,
-opposite direction. Physicists predicted that pattern in 1967 as the mark of rising
-carbon dioxide.
+Record the screen at the live site, https://lapse-earth.vercel.app, in a desktop window.
+"Play the ascent" takes 16 seconds, so for the climb either scroll by hand at a steady pace
+or record Play and speed that clip up. 74 words is a calm pace for 30 seconds.
 
-And for every height, Lapse tells you how sure we are, in four plain labels. When
-the data cannot tell, it says "Not proven yet".
+| Time | On screen | Words (also the subtitles) |
+|---|---|---|
+| 0:00 | Front page: "Warming below. Cooling above." | I'm Lazizbek, team Lapse. Is the air warming? It depends how high you look. |
+| 0:05 | The climb. Red at the bottom turns to blue. The big number counts up through 8, 19, 32 km. | Twenty-four years of NASA satellite data. Near the ground, warming. Past 19 kilometres it flips. At 32, it cools more than twice as fast. |
+| 0:16 | The top: "One sky. Two directions." Then the ask box with one answer and its "Every number traced to the data" tick. | Every height gets an honest label, from "clear change" to "not proven yet". Ask a question, and every number is checked against NASA's records. |
+| 0:25 | End card: lapse-earth.vercel.app | Lapse. What is changing, at which height, and how sure we are. |
+
+Before uploading: watch it once with the sound off. The subtitles alone should carry it.
 
 ## 2-minute demo, click by click
 
+For judges in the room. Open https://lapse-earth.vercel.app before you start.
+
 | Time | Do | Say |
 |---|---|---|
-| 0:00 | Open the site. Leave "Whole globe", "Show me every height", "Air temperature". Click **Show me**. | "Three questions, no science needed." |
-| 0:15 | Point at the short answer. | Read the first sentence aloud. "That sentence is built from the numbers, not written by hand." |
-| 0:30 | Point at the big chart: red at the bottom, blue at the top. | "South Pole to North Pole, ground to the edge of space. Red is warming, blue is cooling. The dashed line is where it flips, about 19 km." |
-| 0:50 | Click **One cause, opposite trends**, then **Next** three times. | "Near the ground: clear warming. At 32 km: clear cooling. In between: not proven yet, and we say so." |
-| 1:15 | On the last step, point at the dashed orange line. | "A second, independent NASA dataset. Same shape. That is what makes a change 'Clear'." |
-| 1:30 | Click **When the data source jumps**, then **Next**. | "Here the second dataset drops 2.7 degrees in one step, when its satellites changed. Lapse caught that by itself and labels it 'Disputed'." |
-| 1:40 | Scroll to **The toolbox**. Click **Textbook, no memory**, then **Auto**. | "Every method in one place. Pick the textbook test and far more turns 'proven'. Our default allows for the air's memory. The table shows when the method changes the answer." |
-| 1:50 | Click **How it works**, scroll to the validation table. | "Our number for the upper air, 2003 to 2012: minus 0.65. The published number: minus 0.65." |
+| 0:00 | Point at the headline. | "Is the planet warming? It depends how high you look." |
+| 0:10 | Ask the judge the guess question and click their answer. | "Which is changing faster, the warming below or the cooling above?" Read the reply aloud. |
+| 0:25 | Press **Play the ascent**. Let it rise. | "Every step is a height NASA measured. Warming, clear change. Here it cannot tell, and it says so: not proven yet. The dashed line is where the direction flips, about 19 km. Above it, cooling." |
+| 0:50 | The top: "One sky. Two directions." | "Same planet, same years, opposite directions. Physicists predicted this pattern in 1967 as the mark of rising carbon dioxide." |
+| 1:00 | Scroll back up. Click **Above you**, type "Cincinnati". | "This is the band of sky at our latitude, all the way around the Earth." |
+| 1:10 | Scroll to **Ask the data**. Click "Did the 2022 volcano change the trend at 32 km?" | "It can only read NASA's results. A program rejects any number that is not in them." Point at the tick. |
+| 1:25 | Open the case **When the data source jumps**. Click **Next** once. | "Here the second dataset drops 2.7 degrees in one step, when its satellites changed. Lapse caught that by itself and labels it 'Disputed'." |
+| 1:40 | Open **Investigate it yourself**. Click **Textbook, no memory**, then **Auto**. | "Every method in one place. The textbook test claims far more than it should. The table shows when the method changes the answer." |
+| 1:50 | Click **Method** at the top. Scroll to the published-science table. | "Our number for the upper air, 2003 to 2012: minus 0.65. The published number: minus 0.65." |
 | 2:00 | Stop. | "Lapse: what is changing in the air, at which height, and how sure we are." |
 
 ## If a judge asks
 
 | Question | Answer |
 |---|---|
-| Why not a map of the surface? | Twenty public entries already do that. The challenge text asks about levels of the atmosphere, and nobody did. |
+| Why not a map of the surface? | About twenty public entries we found do that. The challenge text asks about levels of the atmosphere, and we found none that works on them. |
+| Is this a discovery? | No. The pattern is known science, predicted in 1967 and found in satellite records by a 2023 study. What is new is that anyone can see it in thirty seconds, check it, and see how sure we are at every height. |
 | How do you know it is significant? | Mann-Kendall test with a correction for month-to-month memory, and false discovery control across all cells. Then a second dataset has to agree. |
 | Is the cooling caused by the 2022 volcano? | We checked. Without those months the trend moves from -0.77 to -0.70 at 32 km in the southern middle latitudes. |
+| Can the AI make numbers up? | No. It can only call read-only tools over the published results, and a program rejects any answer with a number that no tool produced. With no AI model at all, the box still answers by rule. |
+| Did AI write the code? | Most of it, with an AI coding assistant that I directed. That is why every number can be recomputed from the repository with one command, and why 88 tests and a published-science check run on every change. |
 | What can it not do? | It cannot tell you about your town, the cause, or the future. The methods page says so. |
 | What would you do next? | Regional boxes instead of full rings, and a third dataset (Aura MLS) to settle the heights where the two disagree. |

@@ -1,4 +1,4 @@
-// The hero picture: one column of air, ground at the bottom, edge of space at the top.
+// The hero picture: one column of air, ground at the bottom, the top of the record at the top.
 // Colour is the direction and speed of change at each height. It reads numbers the
 // pipeline computed and draws them; it computes nothing itself.
 import { color, kmOf, fmt, VERDICT } from "./draw.js";

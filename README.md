@@ -26,7 +26,7 @@ Averaged over the whole globe, AIRS satellite record, 2002 to 2026:
 
 | Height | Change per ten years | Label |
 |---|---|---|
-| About 1 km | +0.24 °C | Clear change |
+| Near the ground | +0.20 °C | Clear change |
 | About 8 km | +0.27 °C | Clear change |
 | About 21 km | -0.07 °C | Not proven yet |
 | About 32 km | -0.59 °C | Clear change |
@@ -66,21 +66,22 @@ Read from:
 Number check: passed. Every number above is in the files listed.
 ```
 
-The agent answers only from the NASA records. With a key for Claude or another model it
-writes freer sentences; a number guard rejects any figure that no tool produced. Without
-a key it answers by rule. Off-topic questions get a polite no. See [docs/agent.md](docs/agent.md).
+The agent answers only from the NASA records. With a key for Claude, Gemini or another model
+it writes freer sentences; a number guard rejects any figure that no tool produced. Without
+a key it answers by rule. The ask box on the live site runs on Google's `gemini-2.5-flash`. Off-topic questions get a polite no. See [docs/agent.md](docs/agent.md).
 
 ## What you see
 
-| Part | Question it answers |
+| Part | What it does |
 |---|---|
-| **The short answer** | One plain paragraph built only from the computed numbers. |
-| **The whole atmosphere at once** | Where is it changing? South Pole to North Pole, ground to the edge of space. Colour is the direction and speed. Texture is the label. |
-| **Every height** | How much, at each height, with the range the true value very likely lies in, and a second dataset as a dashed line. |
-| **Month by month** | The history behind any one point, with volcanoes and data-source changes shaded. |
-| **Case files** | Three guided demos: one cause with opposite trends, a volcano in the record, a jump in the data source. |
-| **Opposite trends** | A list of places where one part of the air rises while another falls. |
-| **The toolbox** | Every data source, method and check in one place. Pick your own or leave it on Auto, and see whether the method changes the answer. |
+| **The ascent** | Scroll, drag the column or press Play, and the page rises from the ground to the top of the record. The height, the rate and its label change as you climb, and the colour follows the direction: warm below, cool above. |
+| **Guess first** | One question before the climb: which is changing faster, the warming below or the cooling above? The reply gives both rates. |
+| **Above you** | Share a location or type a city, and the climb replays for the band of sky at that latitude. The location stays in the browser. |
+| **Ask the data** | A question box. The answer is written only from the NASA results, and every number is checked against them before it is shown. |
+| **Three cases** | Guided demos: one cause with opposite trends, a volcano in the record, a jump in the data source. |
+| **The evidence** | Three views of the same measurements: every latitude and height at once, every height at one place with its likely range and a second dataset, and the month-by-month history with known events shaded. |
+| **Opposite directions** | A list of places where one part of the air rises while another falls. |
+| **Investigate it yourself** | Every data source, method and check in one place. Pick your own or leave it on Auto, and see whether the method changes the answer. |
 
 ## The four labels
 
@@ -95,7 +96,7 @@ a key it answers by rule. Off-topic questions get a polite no. See [docs/agent.m
 
 ```bash
 make setup     # install
-make test      # 85 tests
+make test      # 88 tests
 make verify    # recompute every published number from data/zonal and compare
 make ask       # talk to the agent (no API key needed)
 make demo      # synthetic data -> web/data  (about a minute)
@@ -170,3 +171,11 @@ docs/                                    architecture, data contract, validation
   satellite passes count equally. One MERRA-2 month (June 1998) is missing.
 - Heights in km are approximate conversions from pressure.
 - A trend line describes the record. It does not say the change is steady or will continue.
+
+## Use of AI
+
+Most of the code and text in this repository was written with an AI coding assistant, directed
+and checked by the team. The ask box uses a language model at run time, held to read-only tools
+and a number check ([docs/agent.md](docs/agent.md)). No number on the site is written by an AI:
+each one is computed by the tested pipeline from NASA data, and `make verify` recomputes them
+all. The full statement is in [docs/submission.md](docs/submission.md).

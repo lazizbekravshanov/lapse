@@ -17,12 +17,14 @@ export async function initAsk({ section, form, input, button, out, tryBox, note,
   for (const q of TRY) { const b = el("button", "chip", q); b.type = "button"; tryBox.append(b); }
   tryBox.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { input.value = b.textContent; form.requestSubmit(); } });
 
+  const show = () => out.scrollIntoView({ block: "nearest" });   // an answer below the fold looks like no answer
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const question = input.value.trim();
     if (!question) return;
     button.disabled = true; button.textContent = "Reading…";
-    out.hidden = false; out.replaceChildren(el("p", "small", "Reading the records…"));
+    out.hidden = false; out.replaceChildren(el("p", "small", "Reading the records…")); show();
     let res;
     try {
       const r = await fetch("api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question }) });
@@ -30,9 +32,9 @@ export async function initAsk({ section, form, input, button, out, tryBox, note,
     } catch { res = { error: "The answer service could not be reached. Try again in a moment." }; }
     button.disabled = false; button.textContent = "Ask";
     out.replaceChildren();
-    if (res.error) { out.append(el("p", "a", res.error)); return; }
+    if (res.error) { out.append(el("p", "a", res.error)); show(); return; }
     for (const para of res.answer.split(/\n\n+/)) out.append(el("p", "a", para));
-    if (!res.answered) return;
+    if (!res.answered) { show(); return; }
     const badges = el("div", "badges");
     if (res.checked) badges.append(el("span", "badge ok", "✓ Every number traced to the data"));
     badges.append(el("span", "badge", res.model.startsWith("rules") ? "Answered by rule" : `Written by ${res.model}`));
@@ -55,5 +57,6 @@ export async function initAsk({ section, form, input, button, out, tryBox, note,
       b.type = "button"; b.addEventListener("click", () => onShow(step.args));
       go.append(b); out.append(go);
     }
+    show();
   });
 }
