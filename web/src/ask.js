@@ -12,8 +12,8 @@ export async function initAsk({ section, form, input, button, out, tryBox, note,
     info = await r.json();
   } catch { section.hidden = true; return; }                 // a plain file host has no ask service
   const byRule = info.model.startsWith("rules");
-  note.textContent = byRule ? "No AI model is connected right now, so answers are picked by simple rules from the same data."
-    : `Sentences written by ${info.model}. It can only read these NASA results, and its numbers are checked before you see them.`;
+  note.textContent = byRule ? "No AI model is connected. Answers are chosen by rule, from the same data."
+    : `Written by ${info.model}. It can read these records and nothing else.`;
   for (const q of TRY) { const b = el("button", "chip", q); b.type = "button"; tryBox.append(b); }
   tryBox.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { input.value = b.textContent; form.requestSubmit(); } });
 
@@ -22,7 +22,7 @@ export async function initAsk({ section, form, input, button, out, tryBox, note,
     const question = input.value.trim();
     if (!question) return;
     button.disabled = true; button.textContent = "Reading…";
-    out.hidden = false; out.replaceChildren(el("p", "small", "Reading NASA's records…"));
+    out.hidden = false; out.replaceChildren(el("p", "small", "Reading the records…"));
     let res;
     try {
       const r = await fetch("api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question }) });
@@ -34,8 +34,8 @@ export async function initAsk({ section, form, input, button, out, tryBox, note,
     for (const para of res.answer.split(/\n\n+/)) out.append(el("p", "a", para));
     if (!res.answered) return;
     const badges = el("div", "badges");
-    if (res.checked) badges.append(el("span", "badge ok", "✓ Every number traced to NASA data"));
-    badges.append(el("span", "badge", res.model.startsWith("rules") ? "Answered by rule, no AI model" : `Written by ${res.model}`));
+    if (res.checked) badges.append(el("span", "badge ok", "✓ Every number traced to the data"));
+    badges.append(el("span", "badge", res.model.startsWith("rules") ? "Answered by rule" : `Written by ${res.model}`));
     out.append(badges);
     if (res.sources.length) {
       const d = el("details"), ul = el("ul");

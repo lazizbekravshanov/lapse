@@ -92,9 +92,10 @@ function syncControls() {
   $("witness").checked = state.witness && !!w;
   $("witness").disabled = !w;
   $("witnessLabel").textContent = w ? `Show the second dataset (${ds(w.with_dataset).label})` : "No second dataset for this view";
-  const chip = (id, label, on) => `<button type="button" class="chip" data-id="${id}" aria-pressed="${on}">${label}</button>`;
-  $("pickWhat").innerHTML = variables.map((x) => chip(x.id, x.label, x.id === state.variable)).join("");
-  $("pickWhere").innerHTML = places.map((x) => chip(x.id, x.label, x.id === (state.place.region ?? "lat"))).join("");
+  const chip = (id, label, on, full = label) => `<button type="button" class="chip" data-id="${id}" aria-pressed="${on}" title="${full}" aria-label="${full}">${label}</button>`;
+  const short = { global: "Globe", north_mid: "North", south_mid: "South", t: "Temperature" };
+  $("pickWhat").innerHTML = variables.map((x) => chip(x.id, short[x.id] ?? x.label, x.id === state.variable, x.label)).join("");
+  $("pickWhere").innerHTML = places.map((x) => chip(x.id, short[x.id] ?? x.label, x.id === (state.place.region ?? "lat"), x.label)).join("");
   const v = variable();
   $("explain").textContent = `${v.label}: ${v.explain} ${v.limit_note || ""}`;
   renderTools();
@@ -179,13 +180,15 @@ async function render() {
 
   $("answer").textContent = answer({ col, levels: d.levels_hpa, place: state.place, variable: v, manifest });
   const b = brief({ col, levels: d.levels_hpa, place: state.place, variable: v, manifest });
-  $("lead").innerHTML = `<span>${b.where},</span> ${b.claim}`;
-  const tile = (t, cls) => (t ? `<div class="stat ${cls}"><b>${fmt(col.slope[t.i])}</b><span>${v.trend_units_plain}, strongest ${t.word}<br>near ${Math.round(kmOf(d.levels_hpa[t.i]))} km · ${labelOf(manifest, col.verdict[t.i])}</span></div>` : "");
+  $("lead").textContent = b.headline;
+  $("sub").textContent = `${v.label}, ${b.where.charAt(0).toLowerCase() + b.where.slice(1)}. ${d.label}, ${trend.span.start.slice(0, 4)} to ${trend.span.end.slice(0, 4)}.`;
+  const tile = (t, cls) => (t ? `<div class="stat ${cls}"><b>${fmt(col.slope[t.i])}</b><span>${v.trend_units_plain}</span><span>near ${Math.round(kmOf(d.levels_hpa[t.i]))} km · ${labelOf(manifest, col.verdict[t.i]).toLowerCase()}</span></div>` : "");
   $("stats").innerHTML = tile(b.up, "up") + tile(b.down, "down")
-    + (b.flipKm == null ? "" : `<div class="stat"><b>${b.flipKm} km</b><span>the height where the direction flips</span></div>`);
+    + (b.flipKm == null ? "" : `<div class="stat"><b>${b.flipKm} km</b><span>where the direction flips</span></div>`);
   $("tally").textContent = b.tally;
-  $("eyebrow").textContent = `${d.label} · ${trend.span.start.slice(0, 4)} to ${trend.span.end.slice(0, 4)}`;
-  $("skyTitle").textContent = `${v.label}, ${place.toLowerCase()}: ground to space`;
+  const here = col.slope[level], kmHere = Math.round(kmOf(hpa));
+  $("reading").innerHTML = here == null || col.verdict[level] == null ? `<b>${kmHere} km</b><span>No measurements at this height.</span>`
+    : `<b>${fmt(here)}</b><span>${v.trend_units_plain} at ${kmHere} km</span><em>${labelOf(manifest, col.verdict[level])}</em>`;
   drawSky($("sky"), { col, levels: d.levels_hpa, units: v.trend_units_plain, selLevel: level, content, labelOf: (c) => labelOf(manifest, c) });
   $("detail").textContent = detail({ col, i: level, levels: d.levels_hpa, variable: v, manifest, years: trend.span.years })
     + ` Tools used: ${d.label}, ${catalog.methods.find((m) => m.id === state.method).label.toLowerCase()} method.`;

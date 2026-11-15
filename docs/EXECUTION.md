@@ -64,7 +64,7 @@ The project is now organised as backend -> hub -> frontend (see `docs/architectu
 | Light, minimal style on both pages | Done |
 | Ask box on the site (`api/ask.py`, same harness and number guard) | Done. Checked locally in a browser, rule mode |
 | Gemini preset (`GEMINI_API_KEY`, default `gemini-2.5-flash`) | Written. Not yet run against the live API |
-| `vercel.json` | Written. Not yet deployed: the owner has to import the repo on Vercel |
+| Vercel | Live at https://lapse-earth.vercel.app. Site, data and the ask function all work. Every push to main redeploys |
 | 87 tests | Pass |
 
 Open for the owner: run the agent once with a real model key; fill June 1998

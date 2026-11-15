@@ -91,9 +91,15 @@ export function brief({ col, levels, place, variable, manifest }) {
   else if (!good.length) claim = `no height shows a change we can call likely or clear.`;
   else if (up.length && down.length) claim = mean(up) < mean(down) ? `${w.subject} is ${w.up} low down and ${w.down} higher up.` : `${w.subject} is ${w.down} low down and ${w.up} higher up.`;
   else claim = `${w.subject} is ${up.length ? w.up : w.down} at every height where the change is proven.`;
+  const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1);
+  let headline;
+  if (!idx.length) headline = "No measurements here.";
+  else if (!good.length) headline = "Nothing proven yet.";
+  else if (up.length && down.length) headline = mean(up) < mean(down) ? `${cap(w.up)} below. ${cap(w.down)} above.` : `${cap(w.down)} below. ${cap(w.up)} above.`;
+  else headline = `${cap(up.length ? w.up : w.down)}, at every height we can prove.`;
   const count = (code) => idx.filter((i) => col.verdict[i] === code).length;
   return {
-    where, claim, up: tile(up, w.up), down: tile(down, w.down),
+    where, claim, headline, up: tile(up, w.up), down: tile(down, w.down),
     flipKm: up.length && down.length && col.flip_hpa != null ? km(col.flip_hpa) : null,
     tally: idx.length ? `${idx.length} heights checked: ${count(2)} clear, ${count(1)} likely, ${count(0)} not proven yet, ${count(3)} disputed.` : "",
   };

@@ -95,4 +95,4 @@ Fill in according to the event rules.
 ## Links
 
 - Code: https://github.com/lazizbekravshanov/lapse
-- Site: https://lazizbekravshanov.github.io/lapse/
+- Site: https://lapse-earth.vercel.app

@@ -4,7 +4,7 @@
 
 **What is changing in the atmosphere, at which height, and is it real?**
 
-**Live site: https://lazizbekravshanov.github.io/lapse/**
+**Live site: https://lapse-earth.vercel.app**
 
 Most trend tools look at the surface. Lapse looks at the whole column of air, from the
 ground to about 65 km up, and tests the trend at every height.

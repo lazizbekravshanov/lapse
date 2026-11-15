@@ -11,46 +11,41 @@
 <body>
   <header class="top">
     <a class="mark" href="./">Lapse</a>
-    <nav><a href="#ask">Ask</a> <a href="#evidence">Evidence</a> <a href="methods.html">How we know</a> <a href="https://github.com/lazizbekravshanov/lapse">Code</a></nav>
+    <nav><a href="#ask">Ask</a> <a href="#evidence">Evidence</a> <a href="methods.html">Method</a> <a href="https://github.com/lazizbekravshanov/lapse">Code</a></nav>
   </header>
   <div id="banner" class="banner" hidden></div>
 
   <div class="wrap">
     <section id="hero" class="hero" aria-live="polite">
       <div>
-        <p class="eyebrow" id="eyebrow">NASA records of the air above us</p>
         <h1 id="lead">Reading NASA's records…</h1>
+        <p id="sub" class="sub"></p>
         <div id="stats" class="stats"></div>
-        <p id="tally" class="small"></p>
         <p id="answer" class="sr"></p>
         <div class="picks">
-          <div><span>Where</span><div id="pickWhere" class="chips"></div></div>
-          <div><span>What</span><div id="pickWhat" class="chips"></div></div>
+          <div id="pickWhere" class="chips" aria-label="Where"></div>
+          <div id="pickWhat" class="chips" aria-label="What"></div>
         </div>
       </div>
       <div class="skybox">
-        <h3 id="skyTitle">From the ground to the edge of space</h3>
         <div id="sky"></div>
-        <div class="keyrow"><span><i></i>blue is a fall, red is a rise</span><span>faint: not proven yet</span><span>tap a height</span></div>
-        <p id="detail" class="picked"></p>
+        <div id="reading" class="reading"></div>
+        <details class="why"><summary>Why this label</summary><p id="detail"></p></details>
       </div>
     </section>
 
-    <section id="ask" class="block">
-      <div class="ask">
-        <p class="eyebrow">Ask the data</p>
-        <h2>Ask in your own words.</h2>
-        <p class="lede">The answer comes only from NASA's records. Every number in it is checked against the files it was read from, and you can see which files those were.</p>
-        <form id="askForm"><input id="askInput" type="text" maxlength="300" autocomplete="off" aria-label="Your question" placeholder="Is the Arctic warming?"><button type="submit" id="askGo">Ask</button></form>
-        <div id="askTry" class="chips"></div>
-        <div id="askOut" aria-live="polite" hidden></div>
-        <p id="askNote" class="small" style="margin-top:14px"></p>
-      </div>
+    <section id="ask" class="block ask">
+      <h2>Ask the data.</h2>
+      <p class="lede">It answers only from NASA's records. Every number is checked against them before you see it.</p>
+      <form id="askForm"><input id="askInput" type="text" maxlength="300" autocomplete="off" aria-label="Your question" placeholder="Is the Arctic warming?"><button type="submit" id="askGo">Ask</button></form>
+      <div id="askTry" class="chips"></div>
+      <div id="askOut" aria-live="polite" hidden></div>
+      <p id="askNote" class="small"></p>
     </section>
 
     <section class="block" aria-label="Case files">
-      <p class="eyebrow">Case files</p>
-      <h2>Three cases, walked through step by step.</h2>
+      <h2>Three cases.</h2>
+      <p class="lede">Follow the evidence, one step at a time.</p>
       <div id="caseButtons"></div>
       <div id="case" class="case" aria-live="polite" hidden>
         <h2 id="caseTitle"></h2>
@@ -65,19 +60,18 @@
     </section>
 
     <section id="evidence" class="block">
-      <p class="eyebrow">The evidence</p>
-      <h2>See it for yourself.</h2>
-      <p class="lede">Three views of the same measurements. Click any of them to move around.</p>
+      <h2>The evidence.</h2>
+      <p class="lede">Three views of the same measurements. <span id="tally"></span></p>
       <div class="evidence">
         <figure class="panel curtain">
-          <figcaption><strong>The whole atmosphere at once.</strong> South Pole on the left, North Pole on the right, ground at the bottom, edge of space at the top. Click anywhere to open that ring around the Earth.</figcaption>
+          <figcaption><strong>Every latitude, every height.</strong> South Pole to North Pole, ground to space. Click a spot to open it.</figcaption>
           <canvas id="curtain" width="1000" height="560" tabindex="0" role="img"></canvas>
           <div class="scale"><span id="legmin"></span><i></i><span id="legmax"></span></div>
           <ul id="legend" class="legend"></ul>
           <p class="small" style="margin-top:10px">Dashed line: the height where the direction flips.</p>
         </figure>
         <figure class="panel profile">
-          <figcaption><strong id="profileTitle">Every height</strong>. Left of the middle line is a fall, right is a rise. The grey band is the range the true value very likely lies in. <span id="profileNote"></span></figcaption>
+          <figcaption><strong id="profileTitle">Every height</strong>. Left is a fall, right is a rise. The grey band is the likely range. <span id="profileNote"></span></figcaption>
           <canvas id="profile" width="420" height="560" tabindex="0" role="img" aria-label="Trend at every height for the chosen place"></canvas>
           <ul class="legend dots">
             <li><i class="dot dot-clear"></i>Clear change</li><li><i class="dot dot-likely"></i>Likely change</li>
@@ -85,22 +79,22 @@
           </ul>
         </figure>
         <figure class="panel series">
-          <figcaption><strong id="seriesTitle">Month by month</strong>. Each dot is one month, compared with what is normal for that month. Dark line: 12-month average. Orange line: the trend. Shaded bands: known events.</figcaption>
+          <figcaption><strong id="seriesTitle">Month by month</strong>. Each dot is a month, compared with normal for that month. Orange is the trend. Shaded: known events.</figcaption>
           <canvas id="series" width="1340" height="300" role="img" aria-label="Monthly history at the chosen place and height"></canvas>
         </figure>
       </div>
     </section>
 
     <section id="pairs" class="block pairs" hidden>
-      <p class="eyebrow">Same sky, opposite directions</p>
-      <h2>Where one part of the air rises while another falls.</h2>
+      <h2>Opposite directions.</h2>
+      <p class="lede">Where one part of the air rises while another falls.</p>
       <ul id="pairList"></ul>
       <p id="pairUnits" class="small"></p>
     </section>
 
     <section class="block">
       <details class="fold" id="explore">
-        <summary><span>Investigate it yourself<small>choose the years, the dataset and the method</small></span></summary>
+        <summary><span>Investigate it yourself<small>years, dataset, method</small></span></summary>
         <div>
           <div class="controls" aria-label="Change the view">
             <label>Measure <select id="variable"></select></label>
@@ -144,7 +138,7 @@
 
   <footer>
     <p id="method"></p>
-    <p>Built for the 2026 NASA Space Apps Challenge, "Be An Earth System Trend Detective!". Data: NASA AIRS and MERRA-2. Not affiliated with NASA. <a href="methods.html">How we know, and what this cannot tell you</a>.</p>
+    <p>Built for the 2026 NASA Space Apps Challenge. Data: NASA AIRS and MERRA-2. Not affiliated with NASA. <a href="methods.html">How we know, and what this cannot tell you</a>.</p>
   </footer>
 
   <div id="tip" class="tip" hidden></div>
