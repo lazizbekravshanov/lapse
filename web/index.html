@@ -22,7 +22,16 @@
         <div class="scene intro">
           <h1 id="lead">Reading NASA's records…</h1>
           <p id="sub" class="sub"></p>
-          <div class="go"><button type="button" id="play">Play the ascent</button><span class="small">or scroll, or drag the column</span></div>
+          <div id="guess" class="guess" hidden>
+            <p class="small">Guess before you climb: which is changing faster?</p>
+            <div id="guessA" class="chips"></div>
+            <p id="guessOut" class="small" aria-live="polite"></p>
+          </div>
+          <div class="go"><button type="button" id="play">Play the ascent</button><button type="button" id="above" class="ghost">Above you</button><span class="small">or scroll, or drag the column</span></div>
+          <div id="cityBox" class="citybox" hidden>
+            <input id="city" list="cities" type="text" autocomplete="off" placeholder="Type a city or a latitude" aria-label="City or latitude"><datalist id="cities"></datalist>
+            <p id="aboveNote" class="small">Your location is used once, in your browser, to pick a latitude. It is not sent anywhere.</p>
+          </div>
         </div>
         <div class="scene climb">
           <p class="eyebrow">Altitude</p>

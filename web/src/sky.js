@@ -53,8 +53,9 @@ export function drawSky(el, { col, levels, units, selLevel, content, labelOf, co
   for (const m of [{ km: 0, label: "Where we live" }, ...content.landmarks]) {
     if (m.km > topKm) continue;
     const yy = y(m.km) - (m.km === 0 ? 4 : 0);                                   // keep the ground marker above the column's edge
+    const crowded = col.flip_hpa != null && Math.abs(yy - y(kmOf(col.flip_hpa))) < 14;      // leave room for "direction flips"
     marks += `<g class="lm" data-km="${m.km}"><g class="ico" transform="translate(${X0 - 46} ${(yy - 9).toFixed(1)}) scale(.75)">${ICONS[iconFor(m.label)]}</g>`
-      + (compact ? "" : `<text x="${X0 - 53}" y="${(yy + 4).toFixed(1)}" text-anchor="end">${esc(m.label)}</text>`) + "</g>";
+      + (compact || crowded ? "" : `<text x="${X0 - 53}" y="${(yy + 4).toFixed(1)}" text-anchor="end">${esc(m.label)}</text>`) + "</g>";
   }
   let flip = "";
   if (col.flip_hpa != null) {

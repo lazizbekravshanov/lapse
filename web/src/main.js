@@ -7,6 +7,7 @@ import { answer, brief, detail, labelOf, reasonOf, placeShort, wordsFor } from "
 import { drawSky } from "./sky.js";
 import { initAsk } from "./ask.js";
 import { initAscent } from "./ascent.js";
+import { CITIES } from "./cities.js";
 import { CASES } from "./cases.js";
 
 const $ = (id) => document.getElementById(id);
@@ -185,7 +186,20 @@ async function render() {
   const lines = (text) => text.split(/(?<=\.) /).map((x) => `<span>${x}</span>`).join("");
   $("lead").innerHTML = lines(b.headline);
   const top = Math.round(Math.max(...d.levels_hpa.map(kmOf)));
-  $("sub").textContent = `Scroll to rise through ${Math.round(trend.span.years)} years of NASA measurements, from the ground to ${top} km up.`;
+  $("sub").textContent = state.place.lat != null
+    ? `The band of sky at ${latName(manifest.lat_centers[state.place.lat])}, all the way around the Earth, not one city. Scroll to rise through ${Math.round(trend.span.years)} years of NASA measurements.`
+    : `Scroll to rise through ${Math.round(trend.span.years)} years of NASA measurements, from the ground to ${top} km up.`;
+  // Guess first: one question whose answer the headline does not give away.
+  const guess = $("guess"), key = [state.dataset, state.variable, state.period, state.mask, state.method, JSON.stringify(state.place)].join("|");
+  guess.hidden = !(b.up && b.down);
+  if (!guess.hidden && guess.dataset.key !== key) {
+    const upLow = kmOf(d.levels_hpa[b.up.i]) < kmOf(d.levels_hpa[b.down.i]);
+    guess.dataset.key = key;
+    guess.options = [{ text: `The ${b.up.word} ${upLow ? "below" : "above"}`, rate: col.slope[b.up.i] }, { text: `The ${b.down.word} ${upLow ? "above" : "below"}`, rate: col.slope[b.down.i] }];
+    guess.units = v.trend_units_plain;
+    $("guessA").innerHTML = guess.options.map((o, n) => `<button type="button" class="chip" data-n="${n}">${o.text}</button>`).join("");
+    $("guessOut").textContent = "";
+  }
   $("topTitle").innerHTML = lines(b.up && b.down ? "One sky. Two directions." : b.headline);
   $("source").textContent = `${v.label}, ${b.where.charAt(0).toLowerCase() + b.where.slice(1)}. ${d.label}, ${trend.span.start.slice(0, 4)} to ${trend.span.end.slice(0, 4)}.`;
   const tile = (t, cls) => (t ? `<div class="stat ${cls}"><b>${fmt(col.slope[t.i])}</b><span>${v.trend_units_plain}</span><span>near ${Math.round(kmOf(d.levels_hpa[t.i]))} km · ${labelOf(manifest, col.verdict[t.i]).toLowerCase()}</span></div>` : "");
@@ -349,6 +363,34 @@ function bind() {
 
   $("pickWhat").addEventListener("click", user((e) => { const b = e.target.closest("[data-id]"); if (b) { state.variable = b.dataset.id; state.dataset = autoDataset(b.dataset.id); state.period = null; } }));
   $("pickWhere").addEventListener("click", user((e) => { const b = e.target.closest("[data-id]"); if (b && b.dataset.id !== "lat") state.place = { region: b.dataset.id }; }));
+  $("guessA").addEventListener("click", (e) => {
+    const pick = e.target.closest("[data-n]"), g = $("guess");
+    if (!pick) return;
+    const win = Math.abs(g.options[0].rate) >= Math.abs(g.options[1].rate) ? 0 : 1, lose = 1 - win;
+    for (const c of $("guessA").children) { c.disabled = true; c.setAttribute("aria-pressed", String(Number(c.dataset.n) === win)); }
+    $("guessOut").textContent = `${Number(pick.dataset.n) === win ? "Right." : "Not this time."} ${g.options[win].text}: ${fmt(g.options[win].rate)} against ${fmt(g.options[lose].rate)} ${g.units}. Now climb through it.`;
+  });
+  // Above you: the band of latitude you are in. The location never leaves the browser.
+  const aboveLat = (lat) => {
+    let best = 0;
+    manifest.lat_centers.forEach((c, i) => { if (Math.abs(c - lat) < Math.abs(manifest.lat_centers[best] - lat)) best = i; });
+    closeCase(); state.place = { lat: best };
+    render().then(() => window.scrollTo({ top: $("ascent").offsetTop, behavior: "smooth" }));
+  };
+  const askCity = () => { $("cityBox").hidden = false; $("city").focus(); };
+  $("cities").innerHTML = Object.keys(CITIES).sort().map((c) => `<option value="${c}">`).join("");
+  $("above").addEventListener("click", () => {
+    $("cityBox").hidden = false;
+    if (!navigator.geolocation) return askCity();
+    navigator.geolocation.getCurrentPosition((pos) => aboveLat(pos.coords.latitude), askCity, { maximumAge: 600000, timeout: 8000 });
+  });
+  $("city").addEventListener("change", (e) => {
+    const text = e.target.value.trim(), name = Object.keys(CITIES).find((c) => c.toLowerCase() === text.toLowerCase());
+    const m = text.match(/^(-?\d+(?:\.\d+)?)\s*°?\s*([nsNS])?$/), lat = name ? CITIES[name] : m ? Number(m[1]) * (/s/i.test(m[2] || "") ? -1 : 1) : null;
+    if (lat == null || Math.abs(lat) > 90) { $("aboveNote").textContent = "Not in the list. Type a latitude instead, for example 39 N."; return; }
+    $("aboveNote").textContent = `${name ?? "That latitude"} sits in the band at ${latName(manifest.lat_centers.reduce((a, c) => (Math.abs(c - lat) < Math.abs(a - lat) ? c : a))) }.`;
+    aboveLat(lat);
+  });
   $("sky").addEventListener("click", (e) => { const b = e.target.closest("[data-level]"); if (b) ascent.toLevel(Number(b.dataset.level)); });
   let timer;
   window.addEventListener("resize", () => { clearTimeout(timer); timer = setTimeout(render, 120); });

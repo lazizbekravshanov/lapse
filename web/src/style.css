@@ -6,6 +6,7 @@
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; }
 body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.5; font-size: 17px; letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
 a { color: inherit; text-underline-offset: 3px; }
@@ -96,7 +97,13 @@ svg.ico { width: 1.2em; height: 1.2em; vertical-align: -0.22em; margin-right: .4
 .scene { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; opacity: 0; visibility: hidden; transform: translateY(14px); transition: opacity .45s, transform .45s, visibility .45s; }
 .stage[data-phase="intro"] .intro, .stage[data-phase="climb"] .climb, .stage[data-phase="top"] .summit { opacity: 1; visibility: visible; transform: none; }
 .stage h1 { font-size: clamp(2.4rem, 5.6vw, 4.9rem); font-weight: 600; letter-spacing: -0.045em; line-height: 1.02; }
-.stage .go { margin-top: 40px; gap: 16px; }
+.stage .go { margin-top: 36px; gap: 12px 16px; }
+.guess { margin-top: 30px; display: grid; gap: 10px; justify-items: start; }
+.guess .chip[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); opacity: 1; }
+.guess .chip:disabled { opacity: .55; }
+.citybox { margin-top: 16px; display: grid; gap: 8px; justify-items: start; }
+.citybox input { font: inherit; padding: 10px 16px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.7); color: var(--ink); width: min(320px, 100%); }
+.citybox input:focus { outline: none; border-color: var(--ink); }
 .alt { font-size: clamp(5rem, 15vw, 12.5rem); font-weight: 600; letter-spacing: -0.055em; line-height: .95; font-variant-numeric: tabular-nums; width: fit-content; padding-right: .06em; background: linear-gradient(180deg, var(--ink) 38%, color-mix(in srgb, rgb(var(--tone)) calc(var(--k) * 100%), var(--ink))); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .alt + .sub { margin-top: 6px; }
 .rate { font-size: clamp(1.7rem, 3.6vw, 3rem); font-weight: 600; letter-spacing: -0.03em; margin-top: 44px; font-variant-numeric: tabular-nums; }
@@ -223,6 +230,9 @@ footer p { max-width: var(--w); margin: 0 auto 8px; }
 @media (max-width: 900px) {
   .stage { grid-template-columns: minmax(0, 1fr) 96px; gap: 12px; padding-top: 56px; }
   .say { font-size: 1rem; }
+  .sub { font-size: 1.08rem; margin-top: 14px; }
+  .stage .go .small { display: none; }
+  .guess { margin-top: 20px; } .stage .go { margin-top: 22px; }
   .rate { margin-top: 28px; }
   .evidence, .tool-cols, #caseButtons, .pairs ul, .words dl, .words-list { grid-template-columns: 1fr; }
   .stats { grid-template-columns: 1fr; }
