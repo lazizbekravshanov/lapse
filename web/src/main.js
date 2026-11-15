@@ -15,11 +15,12 @@ let current = {};                        // what the last render loaded
 // --- reading the manifest -----------------------------------------------------
 const ds = (id = state.dataset) => manifest.datasets.find((d) => d.id === id);
 const variable = () => ds().variables.find((v) => v.id === state.variable);
-const datasetsWith = (v) => manifest.datasets.filter((d) => d.variables.some((x) => x.id === v))
-  .sort((a, b) => (a.kind === "satellite" ? -1 : 0) - (b.kind === "satellite" ? -1 : 0));
+const datasetsWith = (v) => manifest.datasets.filter((d) => d.variables.some((x) => x.id === v));
+// "Auto" is decided once, by the hub (manifest.auto). The site only reads it.
+const autoDataset = (v) => manifest.auto[v].dataset;
+const autoPeriod = (d, v) => manifest.auto[v].periods[d];
 const witnessOf = (d = state.dataset, v = state.variable, p = state.period) =>
   manifest.witness.find((w) => w.dataset === d && w.variable === v && w.period === p);
-const overlapPeriod = (d, v) => (ds(d).periods.find((p) => witnessOf(d, v, p.id)) || ds(d).periods[0]).id;
 
 function nearestLevel(hpa, d = ds()) {
   let best = 0;
@@ -30,10 +31,10 @@ function nearestLevel(hpa, d = ds()) {
 function normalize() {
   if (!ds() || !variable()) {
     const options = datasetsWith(state.variable);
-    if (options.length) state.dataset = (options.find((d) => d.id === state.dataset) || options[0]).id;
+    if (options.length) state.dataset = options.some((d) => d.id === state.dataset) ? state.dataset : autoDataset(state.variable);
     else { state.dataset = manifest.datasets[0].id; state.variable = ds().variables[0].id; }
   }
-  if (!ds().periods.some((p) => p.id === state.period)) state.period = overlapPeriod(state.dataset, state.variable);
+  if (!ds().periods.some((p) => p.id === state.period)) state.period = autoPeriod(state.dataset, state.variable);
   if (!manifest.masks.some((m) => m.id === state.mask)) state.mask = "none";
   if (!catalog.methods.some((m) => m.id === state.method)) state.method = catalog.defaults.method;
   const okLat = state.place.lat != null && state.place.lat >= 0 && state.place.lat < manifest.lat_centers.length;
@@ -97,8 +98,8 @@ function syncControls() {
 
 // --- the toolbox: every tool the hub offers, in one place ---------------------
 const autoChoice = () => {
-  const d = datasetsWith(state.variable)[0].id;
-  return { dataset: d, method: catalog.defaults.method, period: overlapPeriod(d, state.variable) };
+  const d = autoDataset(state.variable);
+  return { dataset: d, method: catalog.defaults.method, period: autoPeriod(d, state.variable) };
 };
 const onAuto = () => { const a = autoChoice(); return a.dataset === state.dataset && a.method === state.method && a.period === state.period; };
 
@@ -212,8 +213,8 @@ function caseAvailable(def) {
 function applyStep() {
   const merged = {};
   for (let i = 0; i <= live.step; i++) Object.assign(merged, live.def.steps[i].set);
-  const d = ds(merged.dataset) ? merged.dataset : datasetsWith(merged.variable)[0].id;
-  const period = merged.period === "overlap" ? overlapPeriod(d, merged.variable) : ds(d).periods[0].id;
+  const d = ds(merged.dataset) ? merged.dataset : autoDataset(merged.variable);
+  const period = merged.period === "overlap" ? autoPeriod(d, merged.variable) : ds(d).periods[0].id;
   Object.assign(state, { dataset: d, variable: merged.variable, period, mask: merged.mask, method: catalog.defaults.method,
     place: { ...merged.place }, hpa: merged.hpa, witness: merged.witness });
 }
@@ -255,7 +256,7 @@ function closeCase() { live = null; $("case").hidden = true; }
 // --- wiring -------------------------------------------------------------------
 function bind() {
   const user = (fn) => (e) => { closeCase(); fn(e); render(); };
-  $("variable").addEventListener("change", user((e) => { state.variable = e.target.value; state.dataset = datasetsWith(e.target.value)[0].id; state.period = null; }));
+  $("variable").addEventListener("change", user((e) => { state.variable = e.target.value; state.dataset = autoDataset(e.target.value); state.period = null; }));
   $("tools").addEventListener("click", (e) => {
     const b = e.target.closest("[data-tool]");
     if (!b || b.disabled) return;
@@ -333,7 +334,7 @@ function onStart(choice) {
   showStart(false);
   if (choice) {
     closeCase();
-    state.variable = choice.variable; state.dataset = datasetsWith(choice.variable)[0].id; state.period = null;
+    state.variable = choice.variable; state.dataset = autoDataset(choice.variable); state.period = null;
     state.place = { region: choice.region }; state.mask = "none";
     normalize();
     if (choice.hpa) state.hpa = choice.hpa;
@@ -366,7 +367,7 @@ async function start() {
   const m = manifest.method;
   $("method").textContent = `Every number comes from the tools listed above, with a false discovery rate of ${m.fdr_q}. Heights in km are approximate. Data last processed ${manifest.generated_at.slice(0, 10)}.`;
   const fromUrl = readUrl();
-  if (!fromUrl) state.dataset = datasetsWith("t")[0]?.id ?? manifest.datasets[0].id;
+  if (!fromUrl) state.dataset = manifest.auto.t?.dataset ?? manifest.datasets[0].id;
   initStart($("start"), manifest, onStart);
   showStart(!fromUrl);
   bind();

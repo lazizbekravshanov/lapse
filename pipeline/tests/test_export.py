@@ -18,7 +18,7 @@ def test_demo_round_trip(tmp_path, monkeypatch):
     (out / "trend" / "old" / "stale.json").write_text("{}")
 
     manifest = export.run(zonal, out, verbose=False)
-    assert manifest["schema"] == 3 and manifest["synthetic"] is True
+    assert manifest["schema"] == 4 and manifest["synthetic"] is True
     assert [d["id"] for d in manifest["datasets"]] == ["merra2", "airs"]
     assert not (out / "trend" / "old").exists()                 # stale output is removed
 

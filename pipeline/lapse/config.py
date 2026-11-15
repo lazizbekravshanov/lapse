@@ -80,11 +80,14 @@ T = Variable(
 QV = Variable(
     id="qv", label="Water vapor", units="%", units_plain="%", source_names=("/QV",), relative=True,
     explain="How much water vapor the air holds, compared with normal for that month.",
-    # MERRA-2 pulls water vapor above the weather layer toward a fixed yearly cycle,
-    # so it cannot show real change there.
-    min_hpa=100.0,
-    limit_note="Only shown up to about 16 km. Higher up, this dataset holds water vapor close to a "
-               "fixed yearly cycle, so it cannot show real change there.",
+    # MERRA-2 takes in humidity measurements only up to 300 hPa. Above the weather layer
+    # it pulls water vapor toward a fixed yearly pattern (3-day relaxation to a zonal-mean
+    # monthly climatology), so change there is not a measurement.
+    # Source: Davis et al., Atmos. Chem. Phys. 17, 12743-12778, 2017, Table 2.
+    min_hpa=300.0,
+    limit_note="Only shown up to about 8 km. This dataset takes in humidity measurements up to that "
+               "height. Higher up its water vapor comes from the model, and in the stratosphere it is "
+               "held close to a fixed yearly pattern, so it cannot show real change there.",
 )
 O3 = Variable(
     id="o3", label="Ozone", units="%", units_plain="%", source_names=("/O3",), relative=True,

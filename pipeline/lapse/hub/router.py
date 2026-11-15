@@ -36,26 +36,15 @@ def resolve(request: dict, manifest: dict, catalog: dict) -> dict:
     if variable is None:
         raise ValueError(f"Unknown measure {what!r}. Choose from: {', '.join(variables)}")
 
-    having = [d for d in datasets if any(v["id"] == variable for v in d["variables"])]
-    having.sort(key=lambda d: d["kind"] != "satellite")              # auto: satellite first
-    if "dataset" in req:
-        ds = next((d for d in having if d["id"] == req["dataset"]), None)
-        if ds is None:
-            raise ValueError(f"{req['dataset']!r} does not measure {variable}. Choose from: "
-                             f"{', '.join(d['id'] for d in having)}")
-    else:
-        ds = having[0]
-
-    def has_witness(pid):
-        return any(w["dataset"] == ds["id"] and w["variable"] == variable and w["period"] == pid
-                   for w in manifest["witness"])
+    auto = manifest["auto"][variable]                 # written by the export (registry.auto_choices)
+    ds_id = req.get("dataset", auto["dataset"])
+    if ds_id not in auto["periods"]:
+        raise ValueError(f"{ds_id!r} does not measure {variable}. Choose from: {', '.join(auto['periods'])}")
+    ds = next(d for d in datasets if d["id"] == ds_id)
     periods = [p["id"] for p in ds["periods"]]
-    if "period" in req:
-        if req["period"] not in periods:
-            raise ValueError(f"Unknown years {req['period']!r}. Choose from: {', '.join(periods)}")
-        period = req["period"]
-    else:
-        period = next((p for p in periods if has_witness(p)), periods[0])   # auto: two datasets
+    period = req.get("period", auto["periods"][ds_id])
+    if period not in periods:
+        raise ValueError(f"Unknown years {period!r}. Choose from: {', '.join(periods)}")
 
     methods = [m["id"] for m in catalog["methods"]]
     method = req.get("method", catalog["defaults"]["method"])
@@ -87,6 +76,34 @@ def resolve(request: dict, manifest: dict, catalog: dict) -> dict:
             "chosen_by_auto": sorted(k for k in ("dataset", "period", "method") if k not in req)}
 
 
+def strongest_level(col: dict, levels: list) -> int:
+    """The height to talk about when none was asked for: the strongest change that
+    earned a "Likely" or "Clear" label, or the middle of the weather layer if none did."""
+    ranked = [k for k in range(len(levels)) if col["verdict"][k] in (1, 2)]
+    if ranked:
+        return max(ranked, key=lambda k: abs(col["slope"][k]))
+    return int(np.argmin(np.abs(np.array(levels) - 500)))
+
+
+def column(trend: dict, place: dict) -> dict:
+    """One column of air out of a trend file: a region, or one latitude ring."""
+    if "region" in place:
+        return trend["regions"][place["region"]]
+    j = place["lat"]
+    col = {k: [row[j] for row in trend[k]] for k in ("slope", "lo", "hi", "sig", "verdict", "reason", "agree")}
+    if "step" in trend:
+        col["step"] = [row[j] for row in trend["step"]]
+    col["flip_hpa"] = trend["flip_hpa"][j]
+    return col
+
+
+def place_phrase(place: dict, manifest: dict) -> str:
+    if "region" in place:
+        return next(r["phrase"] for r in manifest["regions"] if r["id"] == place["region"])
+    lat = manifest["lat_centers"][place["lat"]]
+    return f"In the ring around the Earth at {abs(lat)}°{'N' if lat > 0 else 'S'}"
+
+
 def route(resolved: dict, catalog: dict) -> str:
     """The file that holds the answer to a resolved request."""
     return catalog["routes"]["trend"].format(**resolved)
@@ -103,19 +120,11 @@ def answer(request: dict, data_dir: Path | None = None) -> dict:
     var = next(v for v in ds["variables"] if v["id"] == res["variable"])
     levels = ds["levels_hpa"]
 
-    if "region" in res["place"]:
-        col = trend["regions"][res["place"]["region"]]
-        where = next(r["phrase"] for r in manifest["regions"] if r["id"] == res["place"]["region"])
-    else:
-        j = res["place"]["lat"]
-        col = {k: [row[j] for row in trend[k]] for k in ("slope", "lo", "hi", "verdict", "reason", "agree")}
-        lat = manifest["lat_centers"][j]
-        where = f"In the ring around the Earth at {abs(lat)}°{'N' if lat > 0 else 'S'}"
-
+    col = column(trend, res["place"])
+    where = place_phrase(res["place"], manifest)
     i = res["level"]
     if i is None:                                   # no height asked: the strongest labelled change
-        ranked = [k for k in range(len(levels)) if col["verdict"][k] in (1, 2)]
-        i = max(ranked, key=lambda k: abs(col["slope"][k])) if ranked else int(np.argmin(np.abs(np.array(levels) - 500)))
+        i = strongest_level(col, levels)
     label = {v["code"]: v["label"] for v in manifest["verdicts"]}
     reason = {r["code"]: r["text"] for r in manifest["reasons"]}
     km = round(float(config.approx_altitude_km(levels[i])))

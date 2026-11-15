@@ -48,8 +48,8 @@ legend { float: left; width: 86px; padding: 6px 0; color: var(--muted); }
 .answer p { margin: 0 0 12px; font: 400 20px/1.4 ui-serif, Georgia, serif; }
 .answer p.small { font: 15px/1.5 ui-sans-serif, system-ui, sans-serif; color: #e6e1d5; margin-bottom: 0; }
 
-label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
-select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); max-width: 100%; }
+label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); max-width: 100%; min-width: 0; }
+select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); max-width: 100%; min-width: 0; text-overflow: ellipsis; }
 .explain { color: var(--muted); margin: 10px 0 0; font-size: 13.5px; }
 
 main { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }

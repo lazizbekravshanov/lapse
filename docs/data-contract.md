@@ -1,4 +1,4 @@
-# Data contract (schema 3)
+# Data contract (schema 4)
 
 The backend writes these files into `web/data/`. The hub's router and the website
 both read them, plus `web/content/glossary.json`, and nothing else. The website never computes a trend,
@@ -22,14 +22,15 @@ on every run, so no stale file survives.
 | `routes` | Path templates: `trend`, `pairs`, `series_region`, `series_lat`. Clients build paths from these. |
 
 A request is `{dataset, variable, period, mask, method, place, height}`. Its answer is at
-`routes.trend` filled with the first five. `lapse.hub.router` resolves "auto" values and
-reads the answer; the website does the same in the browser.
+`routes.trend` filled with the first five. "Auto" is decided once, by
+`lapse.hub.registry.auto_choices`, and published as `manifest.auto`. The router, the website
+and the agent tools all read that and never work it out again.
 
 ## manifest.json
 
 | Key | Meaning |
 |---|---|
-| `schema` | Contract version. Now `3`. |
+| `schema` | Contract version. Now `4` (added `auto`). |
 | `synthetic` | `true` if any cube was synthetic. The site must show a banner. |
 | `method` | `alpha`, `fdr_q`, slope and test names, `event_check_mask`, `event_change_limit`, `jump_share`. |
 | `lat_centers`, `lat_step` | Latitude band centres in degrees, and the band width. |
@@ -42,6 +43,7 @@ reads the answer; the website does the same in the browser.
 | `datasets[].periods[]` | `id`, `label`, `start`, `end`, `years`. Only periods that cover different years are listed. |
 | `datasets[].variables[]` | `id`, `label`, `explain`, `relative`, `units`, `trend_units`, `units_plain`, `trend_units_plain`, `limit_note`. |
 | `witness[]` | `dataset`, `variable`, `period`, `with_dataset`, `with_period`: the second dataset that covers the same years. |
+| `auto` | For each variable id: `dataset` (the one Auto picks) and `periods` (for each dataset that measures it, the years Auto picks). |
 
 ## Verdict codes
 

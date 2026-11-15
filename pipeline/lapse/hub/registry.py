@@ -93,6 +93,23 @@ ROUTES = {
 }
 
 
+def auto_choices(datasets: list, witness: list) -> dict:
+    """The one place the "Auto" rules live. The export publishes the result in the
+    manifest; the router and the website both read it and never re-derive it.
+
+    datasets, witness: the manifest's own lists.
+    Returns {variable id: {"dataset": id, "periods": {dataset id: period id}}}.
+    """
+    out = {}
+    for d in sorted(datasets, key=lambda d: d["kind"] != "satellite"):       # rule 1: satellite first
+        periods = [p["id"] for p in d["periods"]]
+        for v in d["variables"]:
+            shared = {w["period"] for w in witness if w["dataset"] == d["id"] and w["variable"] == v["id"]}
+            pick = next((p for p in periods if p in shared), periods[0])      # rule 2: years two datasets share
+            out.setdefault(v["id"], {"dataset": d["id"], "periods": {}})["periods"][d["id"]] = pick
+    return out
+
+
 def catalog() -> dict:
     """Everything a user can choose between, described in plain words."""
     return {

@@ -19,7 +19,7 @@ from ..data import cubes
 from ...hub import registry
 from ..operations import stats, verdict
 
-SCHEMA = 3
+SCHEMA = 4
 GENERATED = ("trend", "series", "pairs", "agreement")     # folders this module owns
 KEYS = ("slope", "lo", "hi", "p", "r1", "n")
 
@@ -364,6 +364,7 @@ def run(zonal_dir: Path | None = None, out_dir: Path | None = None, verbose: boo
         "witness": [{"dataset": d, "variable": v, "period": p, "with_dataset": w[0], "with_period": w[1]}
                     for (d, v, p), w in sorted(witness.items())],
     }
+    manifest["auto"] = registry.auto_choices(entries, manifest["witness"])
     _dump(out_dir / "manifest.json", manifest)
     _dump(out_dir / "catalog.json", registry.catalog())
     if verbose:

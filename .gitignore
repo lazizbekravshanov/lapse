@@ -5,10 +5,9 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 
-# Raw and intermediate science data (regenerate with the pipeline)
+# Raw monthly downloads (regenerate with the pipeline). The four reduced cubes in
+# data/zonal ARE committed, so every number can be recomputed without a NASA login.
 data/cache/
-data/zonal/*.nc
-!data/zonal/.gitkeep
 
 # Credentials: never commit Earthdata logins
 .netrc

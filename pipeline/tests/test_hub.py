@@ -3,8 +3,6 @@ import json
 import numpy as np
 import pytest
 
-from lapse.backend.actions import export
-from lapse.backend.data import synthetic
 from lapse.backend.operations import stats
 from lapse.hub import registry, router
 
@@ -57,16 +55,6 @@ def test_registry_has_one_recommended_method_and_a_complete_catalog():
     assert "{method}" in cat["routes"]["trend"]
 
 
-@pytest.fixture(scope="module")
-def site(tmp_path_factory):
-    root = tmp_path_factory.mktemp("hub")
-    synthetic.generate(root / "zonal")
-    for extra in ("merra2_qv.nc", "merra2_o3.nc"):
-        (root / "zonal" / extra).unlink()
-    export.run(root / "zonal", root / "web", verbose=False)
-    return root / "web"
-
-
 def test_router_fills_in_auto_choices(site):
     manifest, catalog = json.loads((site / "manifest.json").read_text()), json.loads((site / "catalog.json").read_text())
     res = router.resolve({"what": "Air temperature", "where": "arctic", "km": 32}, manifest, catalog)
@@ -100,3 +88,13 @@ def test_router_answers_from_the_published_files(site):
     assert (site / high["route"]).exists() and high["request"]["method"] == "yearly"
     strongest = router.answer({"where": "tropics"}, site)   # no height: picks the strongest labelled change
     assert strongest["rate"] is not None
+
+
+def test_auto_rules_live_in_one_place_and_are_published(site):
+    manifest = json.loads((site / "manifest.json").read_text())
+    assert manifest["auto"] == registry.auto_choices(manifest["datasets"], manifest["witness"])
+    assert manifest["auto"]["t"]["dataset"] == "airs"                       # satellite first
+    assert manifest["auto"]["t"]["periods"] == {"airs": "full", "merra2": "airs_era"}   # the years both cover
+    only = registry.auto_choices([{"id": "x", "kind": "reanalysis", "periods": [{"id": "full"}, {"id": "late"}],
+                                   "variables": [{"id": "o3"}]}], [])
+    assert only == {"o3": {"dataset": "x", "periods": {"x": "full"}}}       # no second dataset: the full record
