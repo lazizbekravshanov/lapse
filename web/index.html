@@ -46,13 +46,36 @@
   <section class="controls" aria-label="Change the view">
     <label>Measure <select id="variable"></select></label>
     <label>Place <select id="place"></select></label>
-    <label>Data <select id="dataset"></select></label>
     <label>Years <select id="period"></select></label>
     <label>Months used <select id="mask"></select></label>
     <label class="check"><input type="checkbox" id="witness"> <span id="witnessLabel">Show the second dataset</span></label>
     <button type="button" id="copy" class="ghost">Copy link to this view</button>
   </section>
   <p id="explain" class="explain"></p>
+
+  <section id="tools" class="tools" aria-label="Choose your tools">
+    <div class="tools-head">
+      <h2>The toolbox</h2>
+      <button type="button" id="auto" class="chip" data-tool="auto" aria-pressed="true">Auto</button>
+      <span id="autoNote" class="small"></span>
+    </div>
+    <p class="small">Every data source, method and check Lapse has, in one place. Pick your own or leave it on Auto.
+      Whatever you pick, the same checks run and the answer comes back in the same form.</p>
+    <div class="tool-cols">
+      <div><h3>1. Data source</h3><div id="toolData" class="cards"></div></div>
+      <div><h3>2. Method</h3><div id="toolMethod" class="cards"></div></div>
+      <div><h3>3. Checks, always on</h3><ul id="toolChecks" class="checks"></ul></div>
+    </div>
+    <div class="compare">
+      <h3 id="compareTitle">Does the method change the answer?</h3>
+      <table>
+        <thead><tr><th>Method</th><th>Rate</th><th>Very likely between</th><th>Passes the test</th><th>Label</th></tr></thead>
+        <tbody id="compareRows"></tbody>
+      </table>
+      <p class="small"><span id="compareUnits"></span> <strong id="compareNote"></strong></p>
+      <p class="small">A range can sit just clear of zero and still not pass: many heights are tested at once, so each one is held to a stricter bar.</p>
+    </div>
+  </section>
 
   <main>
     <figure class="panel curtain">

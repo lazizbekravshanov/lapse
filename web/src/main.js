@@ -1,4 +1,4 @@
-import { loadManifest, loadGlossary, loadTrend, loadSeries, loadPairs, monthAxis, monthKey } from "./data.js";
+import { loadManifest, loadCatalog, loadGlossary, setRoutes, loadTrend, loadSeries, loadPairs, monthAxis, monthKey } from "./data.js";
 import { drawCurtain } from "./curtain.js";
 import { drawProfile } from "./profile.js";
 import { drawSeries } from "./series.js";
@@ -8,8 +8,8 @@ import { CASES } from "./cases.js";
 import { initStart } from "./start.js";
 
 const $ = (id) => document.getElementById(id);
-const state = { dataset: null, variable: "t", period: null, mask: "none", place: { region: "global" }, hpa: 10, witness: true };
-let manifest, content, live = null;      // live = { def, step } while a case file is open
+const state = { dataset: null, variable: "t", period: null, mask: "none", method: null, place: { region: "global" }, hpa: 10, witness: true };
+let manifest, catalog, content, live = null;      // live = { def, step } while a case file is open
 let current = {};                        // what the last render loaded
 
 // --- reading the manifest -----------------------------------------------------
@@ -35,6 +35,7 @@ function normalize() {
   }
   if (!ds().periods.some((p) => p.id === state.period)) state.period = overlapPeriod(state.dataset, state.variable);
   if (!manifest.masks.some((m) => m.id === state.mask)) state.mask = "none";
+  if (!catalog.methods.some((m) => m.id === state.method)) state.method = catalog.defaults.method;
   const okLat = state.place.lat != null && state.place.lat >= 0 && state.place.lat < manifest.lat_centers.length;
   const okRegion = state.place.region && manifest.regions.some((r) => r.id === state.place.region);
   if (!okLat && !okRegion) state.place = { region: "global" };
@@ -44,14 +45,14 @@ function normalize() {
 // --- the address bar holds the view, so any view can be shared ----------------
 function writeUrl() {
   const q = new URLSearchParams({ d: state.dataset, v: state.variable, p: state.period, m: state.mask,
-    at: state.place.region ?? "lat" + state.place.lat, h: String(state.hpa), w: state.witness ? "1" : "0" });
+    t: state.method, at: state.place.region ?? "lat" + state.place.lat, h: String(state.hpa), w: state.witness ? "1" : "0" });
   history.replaceState(null, "", "#" + q);
 }
 function readUrl() {
   const q = new URLSearchParams(location.hash.slice(1));
   if (!q.has("d")) return false;
   const at = q.get("at") || "global";
-  Object.assign(state, { dataset: q.get("d"), variable: q.get("v") || "t", period: q.get("p"), mask: q.get("m") || "none",
+  Object.assign(state, { dataset: q.get("d"), variable: q.get("v") || "t", period: q.get("p"), mask: q.get("m") || "none", method: q.get("t"),
     place: at.startsWith("lat") ? { lat: Number(at.slice(3)) } : { region: at }, hpa: Number(q.get("h")) || 10, witness: q.get("w") !== "0" });
   return true;
 }
@@ -61,7 +62,7 @@ function column(t) {
   if (state.place.region) return t.regions[state.place.region];
   const j = state.place.lat, pick = (k) => t[k].map((r) => r[j]);
   return { slope: pick("slope"), lo: pick("lo"), hi: pick("hi"), verdict: pick("verdict"), reason: pick("reason"),
-    step: t.step ? pick("step") : null, flip_hpa: t.flip_hpa[j] };
+    agree: pick("agree"), step: t.step ? pick("step") : null, flip_hpa: t.flip_hpa[j] };
 }
 
 function keepFn(period) {
@@ -80,7 +81,6 @@ function syncControls() {
   const variables = [];
   for (const d of manifest.datasets) for (const v of d.variables) if (!variables.some((x) => x.id === v.id)) variables.push(v);
   fill($("variable"), variables, state.variable);
-  fill($("dataset"), datasetsWith(state.variable), state.dataset);
   fill($("period"), ds().periods.map((p) => ({ id: p.id, label: `${p.label}: ${p.start.slice(0, 4)} to ${p.end.slice(0, 4)}` })), state.period);
   fill($("mask"), manifest.masks, state.mask);
   const places = manifest.regions.map((r) => ({ id: r.id, label: r.label }));
@@ -91,7 +91,54 @@ function syncControls() {
   $("witness").disabled = !w;
   $("witnessLabel").textContent = w ? `Show the second dataset (${ds(w.with_dataset).label})` : "No second dataset for this view";
   const v = variable();
-  $("explain").textContent = `${v.label}: ${v.explain} ${v.limit_note || ""} Source: ${ds().label}. ${ds().note}`;
+  $("explain").textContent = `${v.label}: ${v.explain} ${v.limit_note || ""}`;
+  renderTools();
+}
+
+// --- the toolbox: every tool the hub offers, in one place ---------------------
+const autoChoice = () => {
+  const d = datasetsWith(state.variable)[0].id;
+  return { dataset: d, method: catalog.defaults.method, period: overlapPeriod(d, state.variable) };
+};
+const onAuto = () => { const a = autoChoice(); return a.dataset === state.dataset && a.method === state.method && a.period === state.period; };
+
+function renderTools() {
+  const card = (kind, id, on, off, title, tag, text, small) => `
+    <button type="button" class="card" data-tool="${kind}" data-id="${id}" aria-pressed="${on}" ${off ? "disabled" : ""}>
+      <strong>${title}</strong>${tag ? `<em>${tag}</em>` : ""}<span>${text}</span><small>${small}</small></button>`;
+  const can = datasetsWith(state.variable).map((d) => d.id), v = variable();
+  $("toolData").innerHTML = manifest.datasets.map((d) => card("dataset", d.id, d.id === state.dataset, !can.includes(d.id),
+    d.label, d.kind === "satellite" ? "Measured from orbit" : "Model + measurements",
+    can.includes(d.id) ? d.note : `Does not measure ${v.label.toLowerCase()}.`,
+    `${d.time.start.slice(0, 4)} to ${d.time.end.slice(0, 4)}, ${d.levels_hpa.length} heights. ${d.source}`)).join("");
+  $("toolMethod").innerHTML = catalog.methods.map((m) => card("method", m.id, m.id === state.method, false,
+    m.label, m.recommended ? "Recommended" : m.sound ? "" : "Comparison only", m.plain + (m.caution ? " " + m.caution : ""), m.science)).join("");
+  $("toolChecks").innerHTML = catalog.checks.map((c) => `<li><strong>${c.label}.</strong> ${c.plain}</li>`).join("");
+  $("auto").setAttribute("aria-pressed", onAuto());
+  const a = autoChoice();
+  $("autoNote").textContent = onAuto() ? `Auto is on: ${ds(a.dataset).label}, ${catalog.methods.find((m) => m.id === a.method).label.toLowerCase()} method.`
+    : "You chose the tools yourself. Press Auto to go back to the recommended ones.";
+}
+
+async function renderCompare(level) {
+  const d = ds(), v = variable(), hpa = d.levels_hpa[level];
+  const rows = [];
+  for (const m of catalog.methods) {
+    const t = await loadTrend(d.id, v.id, state.period, state.mask, m.id).catch(() => null);
+    const c = t ? column(t) : null;
+    if (!c || c.slope[level] == null) { rows.push(`<tr><td>${m.label}</td><td colspan="4">No result</td></tr>`); continue; }
+    rows.push(`<tr class="${m.id === state.method ? "on" : ""}"><td><button type="button" class="link" data-tool="method" data-id="${m.id}">${m.label}</button>${m.sound ? "" : " <small>(comparison only)</small>"}</td>
+      <td>${fmt(c.slope[level])}</td><td>${fmt(c.lo[level])} to ${fmt(c.hi[level])}</td>
+      <td>${c.verdict[level] === 0 ? "No" : "Yes"}</td><td>${labelOf(manifest, c.verdict[level])}</td></tr>`);
+  }
+  const mine = current.col, n = catalog.sound_methods.length, k = mine.agree ? mine.agree[level] : null;
+  const w = wordsFor(v), dir = mine.slope[level] > 0 ? w.upNoun : w.downNoun;
+  $("compareTitle").textContent = `Does the method change the answer? ${placeShort(state.place, manifest)}, about ${Math.round(kmOf(hpa))} km up`;
+  $("compareRows").innerHTML = rows.join("");
+  $("compareUnits").textContent = `Rates are in ${v.trend_units_plain}.`;
+  $("compareNote").textContent = k == null ? "" : k === n ? `All ${n} sound methods find a ${dir} here. The choice of method does not change the answer.`
+    : k === 0 ? `None of the ${n} sound methods can prove a ${dir} here.`
+    : `Only ${k} of the ${n} sound methods find a ${dir} here. The answer depends on the method, so treat it with care.`;
 }
 
 // --- drawing everything -------------------------------------------------------
@@ -100,9 +147,9 @@ async function render() {
   syncControls();
   const d = ds(), v = variable(), period = d.periods.find((p) => p.id === state.period);
   const level = nearestLevel(state.hpa);
-  const trend = await loadTrend(d.id, v.id, state.period, state.mask);
+  const trend = await loadTrend(d.id, v.id, state.period, state.mask, state.method);
   const w = witnessOf();
-  const other = w ? await loadTrend(w.with_dataset, v.id, w.with_period, state.mask).catch(() => null) : null;
+  const other = w ? await loadTrend(w.with_dataset, v.id, w.with_period, state.mask, state.method).catch(() => null) : null;
   const col = column(trend), otherCol = other && state.witness ? column(other) : null;
   current = { trend, other, col, level, period };
 
@@ -126,10 +173,12 @@ async function render() {
     events, masked: mask.exclude, keep: keepFn(period), units: v.units_plain });
 
   $("answer").textContent = answer({ col, levels: d.levels_hpa, place: state.place, variable: v, manifest });
-  $("detail").textContent = detail({ col, i: level, levels: d.levels_hpa, variable: v, manifest, years: trend.span.years });
+  $("detail").textContent = detail({ col, i: level, levels: d.levels_hpa, variable: v, manifest, years: trend.span.years })
+    + ` Tools used: ${d.label}, ${catalog.methods.find((m) => m.id === state.method).label.toLowerCase()} method.`;
   $("curtain").setAttribute("aria-label", `Map of trends by latitude and height. ${$("answer").textContent}`);
 
-  renderPairs(await loadPairs(d.id, v.id, state.period).catch(() => null));
+  await renderCompare(level);
+  renderPairs(await loadPairs(d.id, v.id, state.period, state.method).catch(() => null));
   if (live) await renderCase();
   writeUrl();
 }
@@ -165,13 +214,14 @@ function applyStep() {
   for (let i = 0; i <= live.step; i++) Object.assign(merged, live.def.steps[i].set);
   const d = ds(merged.dataset) ? merged.dataset : datasetsWith(merged.variable)[0].id;
   const period = merged.period === "overlap" ? overlapPeriod(d, merged.variable) : ds(d).periods[0].id;
-  Object.assign(state, { dataset: d, variable: merged.variable, period, mask: merged.mask, place: { ...merged.place }, hpa: merged.hpa, witness: merged.witness });
+  Object.assign(state, { dataset: d, variable: merged.variable, period, mask: merged.mask, method: catalog.defaults.method,
+    place: { ...merged.place }, hpa: merged.hpa, witness: merged.witness });
 }
 
 async function renderCase() {
   const d = ds(), v = variable(), w = wordsFor(v), wit = witnessOf();
   const byMask = {};
-  for (const m of manifest.masks) byMask[m.id] = await loadTrend(d.id, v.id, state.period, m.id).catch(() => null);
+  for (const m of manifest.masks) byMask[m.id] = await loadTrend(d.id, v.id, state.period, m.id, state.method).catch(() => null);
   const col = (m) => column(byMask[m || state.mask] || current.trend);
   const i = (hpa) => nearestLevel(hpa);
   const otherCol = current.other ? column(current.other) : null;
@@ -206,7 +256,15 @@ function closeCase() { live = null; $("case").hidden = true; }
 function bind() {
   const user = (fn) => (e) => { closeCase(); fn(e); render(); };
   $("variable").addEventListener("change", user((e) => { state.variable = e.target.value; state.dataset = datasetsWith(e.target.value)[0].id; state.period = null; }));
-  $("dataset").addEventListener("change", user((e) => { state.dataset = e.target.value; state.period = null; }));
+  $("tools").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-tool]");
+    if (!b || b.disabled) return;
+    closeCase();
+    if (b.dataset.tool === "dataset") { state.dataset = b.dataset.id; state.period = null; }
+    if (b.dataset.tool === "method") state.method = b.dataset.id;
+    if (b.dataset.tool === "auto") Object.assign(state, autoChoice());
+    render();
+  });
   $("period").addEventListener("change", user((e) => { state.period = e.target.value; }));
   $("mask").addEventListener("change", user((e) => { state.mask = e.target.value; }));
   $("place").addEventListener("change", user((e) => { if (e.target.value !== "lat") state.place = { region: e.target.value }; }));
@@ -280,7 +338,7 @@ function onStart(choice) {
     normalize();
     if (choice.hpa) state.hpa = choice.hpa;
     else {                                   // "every height": open on the strongest labelled change
-      loadTrend(state.dataset, state.variable, state.period, "none").then((t) => {
+      loadTrend(state.dataset, state.variable, state.period, "none", state.method).then((t) => {
         const c = t.regions[choice.region], lv = ds().levels_hpa;
         let best = null;
         lv.forEach((_, i) => { if (c.verdict[i] >= 1 && c.verdict[i] <= 2 && (best == null || Math.abs(c.slope[i]) > Math.abs(c.slope[best]))) best = i; });
@@ -295,7 +353,8 @@ function onStart(choice) {
 
 async function start() {
   try {
-    [manifest, content] = await Promise.all([loadManifest(), loadGlossary()]);
+    [manifest, catalog, content] = await Promise.all([loadManifest(), loadCatalog(), loadGlossary()]);
+    setRoutes(catalog.routes);
   } catch (err) {
     $("answer").textContent = "No data found. Run `python -m lapse export` in the repository first.";
     return;
@@ -305,7 +364,7 @@ async function start() {
     .map((v) => `<li><i class="sw sw-${v.id}"></i><span><strong>${v.label}.</strong> ${v.meaning}</span></li>`).join("");
   $("glossary").innerHTML = content.terms.map((t) => `<div><dt>${t.plain} <small>${t.science}</small></dt><dd>${t.explain}</dd></div>`).join("");
   const m = manifest.method;
-  $("method").textContent = `How the numbers are made: ${m.slope} slope, ${m.test}, false discovery rate ${m.fdr_q}. Heights in km are approximate. Data last processed ${manifest.generated_at.slice(0, 10)}.`;
+  $("method").textContent = `Every number comes from the tools listed above, with a false discovery rate of ${m.fdr_q}. Heights in km are approximate. Data last processed ${manifest.generated_at.slice(0, 10)}.`;
   const fromUrl = readUrl();
   if (!fromUrl) state.dataset = datasetsWith("t")[0]?.id ?? manifest.datasets[0].id;
   initStart($("start"), manifest, onStart);

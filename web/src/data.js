@@ -13,11 +13,23 @@ async function get(path) {
 }
 
 export const loadManifest = () => get("data/manifest.json");
+export const loadCatalog = () => get("data/catalog.json");
 export const loadGlossary = () => get("content/glossary.json");
-export const loadTrend = (ds, v, period, mask) => get(`data/trend/${ds}/${v}/${period}__${mask}.json`);
-export const loadPairs = (ds, v, period) => get(`data/pairs/${ds}/${v}/${period}.json`);
-export const loadSeries = (ds, v, place) => get(`data/series/${ds}/${v}/${
-  place.region ? "region_" + place.region : "lat_" + String(place.lat).padStart(2, "0")}.json`);
+
+// The hub publishes where each answer lives (catalog.routes). Paths are built from
+// those templates, never typed in here.
+let routes = null;
+export const setRoutes = (r) => { routes = r; };
+const fillRoute = (template, values) => "data/" + template.replace(/\{(\w+)(?::02d)?\}/g, (m, key) =>
+  (m.includes(":02d") ? String(values[key]).padStart(2, "0") : values[key]));
+
+export const loadTrend = (dataset, variable, period, mask, method) =>
+  get(fillRoute(routes.trend, { dataset, variable, period, mask, method }));
+export const loadPairs = (dataset, variable, period, method) =>
+  get(fillRoute(routes.pairs, { dataset, variable, period, method }));
+export const loadSeries = (dataset, variable, place) => get(place.region
+  ? fillRoute(routes.series_region, { dataset, variable, region: place.region })
+  : fillRoute(routes.series_lat, { dataset, variable, lat: place.lat }));
 
 // "2002-09" + n months -> [{y, m, t}] where t counts months
 export function monthAxis(start, n) {

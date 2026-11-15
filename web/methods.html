@@ -34,6 +34,15 @@
       the fact that the air "remembers": a warm month is often followed by another warm month. Because we test
       hundreds of places at once, we also control how many false alarms are allowed among the ones we flag.</p>
 
+    <h2>The toolbox</h2>
+    <p>Lapse keeps every data source, method and check in one catalog. You can choose your own tools on the main
+      page or leave it on Auto. Every method takes the same input and gives its answer in the same form, so they
+      can be swapped and compared.</p>
+    <table id="tools"><tr><th>Method</th><th>What it does</th><th>Scientific name</th></tr></table>
+    <p>We tested each method on made-up records with no trend but with strong month-to-month memory. A fair method
+      should raise a false alarm about 5 times in 100. The three sound methods stay between 3 and 8. The textbook
+      method raises a false alarm 30 to 65 times in 100, which is why it is shown for comparison only.</p>
+
     <h2>4. What the four labels mean</h2>
     <table id="labels"><tr><th>Label</th><th>Meaning</th></tr></table>
     <p>Three extra checks can change a label:</p>
@@ -72,6 +81,10 @@
       [2, 1, 0, 3].map((c) => manifest.verdicts.find((v) => v.code === c)).map((v) => row([`<strong>${v.label}</strong>`, v.meaning])).join(""));
     if (validation) document.getElementById("validation").insertAdjacentHTML("beforeend",
       validation.rows.map((r) => row([r.finding, r.source, `${r.ours}<br><small>${r.dataset}, ${r.years}</small>`, r.match])).join(""));
+    const catalog = await get("data/catalog.json");
+    if (catalog) document.getElementById("tools").insertAdjacentHTML("beforeend",
+      catalog.methods.map((m) => row([`<strong>${m.label}</strong>${m.recommended ? "<br><small>Recommended</small>" : m.sound ? "" : "<br><small>Comparison only</small>"}`,
+        m.plain + (m.caution ? " " + m.caution : ""), m.science])).join(""));
     if (content) document.getElementById("glossary").innerHTML =
       content.terms.map((t) => `<dt><strong>${t.plain}</strong> <small>(${t.science})</small></dt><dd>${t.explain}</dd>`).join("");
   </script>
