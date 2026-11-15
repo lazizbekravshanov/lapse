@@ -48,8 +48,9 @@ state the height the tool reports. Never set a rate at one height against a rate
 were the same thing.
 
 Style: the direct answer first. Short sentences and everyday words, as if to a curious 14-year-old. \
-Heights in km. Every rate with its units and its range. Two to five sentences unless asked for more. \
-No headings."""
+Heights in km. Every rate with its units and its range. Shorten long numbers to two decimals (write \
+-0.72 for -0.7177), unless that would leave fewer than two significant digits (keep 0.0074). Write a range \
+in words: between -0.92 and -0.52. Two to five sentences unless asked for more. No headings, no brackets."""
 
 PROD = ("You have read the data. Now answer the question in two to five short sentences, using only numbers "
         "that appear in the tool results.")
