@@ -193,3 +193,9 @@ real call. The first live run is yours; `--steps` shows what the model did.
   meaning.
 - The agent knows nothing outside these files: no weather, no forecasts, no causes
   beyond what a tool states.
+
+## References
+
+- Model Context Protocol, "Connect to local MCP servers": https://modelcontextprotocol.io/docs/2026-07-28/develop/connect-local-servers
+- Claude Code, "Connect Claude Code to tools via MCP": https://code.claude.com/docs/en/mcp
+- Claude API reference, "Create a Message": https://platform.claude.com/docs/en/api/messages/create

@@ -1,5 +1,7 @@
 # Lapse
 
+[![Tests](https://github.com/lazizbekravshanov/lapse/actions/workflows/tests.yml/badge.svg)](https://github.com/lazizbekravshanov/lapse/actions/workflows/tests.yml)
+
 **What is changing in the atmosphere, at which height, and is it real?**
 
 Most trend tools look at the surface. Lapse looks at the whole column of air, from the
@@ -14,6 +16,7 @@ Not affiliated with NASA.
 > **Status:** running on real NASA data. AIRS: 289 months, 2002 to 2026. MERRA-2: 560 of 561
 > months, 1980 to 2026. No synthetic data is on the site. The reduced data is in this
 > repository, so `make verify` recomputes every published number with no NASA login.
+> GitHub reruns the tests and that comparison on every push (the badge above).
 
 ## What the data says
 
