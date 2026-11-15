@@ -55,7 +55,7 @@ button.link { background: none; border: 0; padding: 0; color: var(--ink); text-d
 .skybox { border: 0; padding: 0; width: 100%; max-width: 360px; margin: 0 auto; }
 .skybox h3 { font-size: .82rem; font-weight: 500; color: var(--muted); margin-bottom: 4px; }
 #sky svg { width: 100%; height: auto; display: block; }
-#sky [data-level] { cursor: pointer; }
+#sky [data-level] { cursor: inherit; }
 #sky text { font-size: 11px; fill: var(--muted); font-family: inherit; }
 #sky text.strong { fill: var(--ink); font-weight: 600; }
 .picked { display: none; }
@@ -76,20 +76,31 @@ button.link { background: none; border: 0; padding: 0; color: var(--ink); text-d
 
 /* the ascent: a tall section with a stage that stays put while you scroll */
 .ascent { height: 560vh; }
-.stage { position: sticky; top: 0; height: 100vh; height: 100svh; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(240px, .75fr); gap: 48px; align-items: center; padding: 64px max(24px, calc((100% - var(--w)) / 2 + 24px)) 20px; transition: background-color .6s; }
+.stage { position: sticky; top: 0; height: 100vh; height: 100svh; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(240px, .75fr); gap: 48px; align-items: center; padding: 64px max(24px, calc((100% - var(--w)) / 2 + 24px)) 20px; isolation: isolate; overflow: hidden; --tone: 244 244 245; --low: 244 244 245; --high: 244 244 245; --k: 0; }
+/* two washes behind the words: the whole sky at the start and the summit, the height you are at in between */
+.stage::before, .stage::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; transition: opacity .8s; }
+.stage::before { background: linear-gradient(0deg, rgb(var(--low) / .34), rgb(var(--low) / 0) 48%, rgb(var(--high) / 0) 52%, rgb(var(--high) / .34)); }
+.stage::after { opacity: 0; background: radial-gradient(75% 65% at 24% 50%, rgb(var(--tone) / calc(.16 + .38 * var(--k))), rgb(var(--tone) / calc(.05 + .13 * var(--k))) 72%); }
+.stage[data-phase="climb"]::before { opacity: 0; }
+.stage[data-phase="climb"]::after { opacity: 1; }
+.rail { position: fixed; top: 0; left: 0; z-index: 6; width: 100%; height: 3px; background: var(--ink); transform: scaleX(0); transform-origin: 0 50%; opacity: 0; pointer-events: none; transition: opacity .3s, background-color .4s; }
+#sky { touch-action: none; cursor: ns-resize; }
+#sky[data-drag] { cursor: grabbing; }
 .words { position: relative; height: min(78vh, 640px); }
 .scene { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; opacity: 0; visibility: hidden; transform: translateY(14px); transition: opacity .45s, transform .45s, visibility .45s; }
-.stage[data-phase="intro"] .intro, .stage[data-phase="climb"] .climb, .stage[data-phase="top"] .top { opacity: 1; visibility: visible; transform: none; }
-.stage h1 { font-size: clamp(2.7rem, 6.8vw, 5.5rem); font-weight: 600; letter-spacing: -0.045em; line-height: 1.02; }
+.stage[data-phase="intro"] .intro, .stage[data-phase="climb"] .climb, .stage[data-phase="top"] .summit { opacity: 1; visibility: visible; transform: none; }
+.stage h1 { font-size: clamp(2.4rem, 5.6vw, 4.9rem); font-weight: 600; letter-spacing: -0.045em; line-height: 1.02; }
 .stage .go { margin-top: 40px; gap: 16px; }
-.alt { font-size: clamp(5rem, 15vw, 12.5rem); font-weight: 600; letter-spacing: -0.055em; line-height: .95; font-variant-numeric: tabular-nums; }
+.alt { font-size: clamp(5rem, 15vw, 12.5rem); font-weight: 600; letter-spacing: -0.055em; line-height: .95; font-variant-numeric: tabular-nums; width: fit-content; padding-right: .06em; background: linear-gradient(180deg, var(--ink) 38%, color-mix(in srgb, rgb(var(--tone)) calc(var(--k) * 100%), var(--ink))); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .alt + .sub { margin-top: 6px; }
 .rate { font-size: clamp(1.7rem, 3.6vw, 3rem); font-weight: 600; letter-spacing: -0.03em; margin-top: 44px; font-variant-numeric: tabular-nums; }
 .rate.up { color: var(--warm); } .rate.down { color: var(--cool); }
 .tag { display: inline-block; font-style: normal; font-size: .82rem; border: 1px solid rgba(0,0,0,.14); border-radius: 999px; padding: 4px 12px; margin-top: 14px; }
 .say { color: var(--muted); font-size: 1.15rem; line-height: 1.4; margin-top: 14px; max-width: 36ch; }
-.big { font-size: clamp(2.5rem, 6vw, 5rem); font-weight: 600; letter-spacing: -0.045em; line-height: 1.02; }
-.top .picks { margin-top: 44px; } .top .small { margin-top: 12px; }
+.big { font-size: clamp(2.3rem, 5.4vw, 4.6rem); font-weight: 600; letter-spacing: -0.045em; line-height: 1.02; }
+.summit .picks { margin-top: 44px; } .summit .small { margin-top: 12px; }
+.summit .stats { gap: 18px 36px; } .summit .stat span { font-size: .78rem; }
+.stage h1 span, .big span { display: block; white-space: nowrap; }
 .stage .skybox { max-width: 380px; }
 .stage #sky svg { max-height: calc(100vh - 110px); max-height: calc(100svh - 110px); margin: 0 auto; }
 

@@ -13,6 +13,7 @@
     <a class="mark" href="./">Lapse</a>
     <nav><a href="#ask">Ask</a> <a href="#evidence">Evidence</a> <a href="methods.html">Method</a> <a href="https://github.com/lazizbekravshanov/lapse">Code</a></nav>
   </header>
+  <div id="rail" class="rail"></div>
   <div id="banner" class="banner" hidden></div>
 
   <section id="ascent" class="ascent" aria-label="The finding, from the ground up">
@@ -21,17 +22,19 @@
         <div class="scene intro">
           <h1 id="lead">Reading NASA's records…</h1>
           <p id="sub" class="sub"></p>
-          <div class="go"><button type="button" id="play">Play the ascent</button><span class="small">or just scroll</span></div>
+          <div class="go"><button type="button" id="play">Play the ascent</button><span class="small">or scroll, or drag the column</span></div>
         </div>
         <div class="scene climb">
           <p class="eyebrow">Altitude</p>
           <p class="alt"><span id="altKm">0</span> km</p>
           <p id="altWhere" class="sub"></p>
-          <p id="altRate" class="rate"></p>
-          <p><em id="altLabel" class="tag"></em></p>
-          <p id="altSay" class="say"></p>
+          <div id="altBody">
+            <p id="altRate" class="rate"></p>
+            <p><em id="altLabel" class="tag"></em></p>
+            <p id="altSay" class="say"></p>
+          </div>
         </div>
-        <div class="scene top">
+        <div class="scene summit">
           <p class="eyebrow">The finding</p>
           <h2 id="topTitle" class="big"></h2>
           <div id="stats" class="stats"></div>

@@ -54,5 +54,6 @@ export function drawSky(el, { col, levels, units, selLevel, content, labelOf, co
     <rect x="${X0}" y="${TOP}" width="${X1 - X0}" height="${BOTTOM - TOP}" rx="12" fill="none" stroke="#e4e4e7"/>
     ${ticks}${marks}${flip}${sel}
     <g id="skyMark" transform="translate(0 ${BOTTOM})" pointer-events="none"><line x1="${X0 - 14}" x2="${X1 + 6}" y1="0" y2="0" stroke="#1d1d1f" stroke-width="2.5"/><circle cx="${X0 - 14}" cy="0" r="6" fill="#1d1d1f"/></g></svg>`;
-  return { y, topKm, max, maxKm: Math.max(...km) };
+  const kmAt = (yy) => Math.max(0, Math.min(topKm, ((BOTTOM - yy) / (BOTTOM - TOP)) * topKm));    // inverse of y()
+  return { y, kmAt, viewHeight: H, topKm, max, maxKm: Math.max(...km) };
 }

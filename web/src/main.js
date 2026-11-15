@@ -182,10 +182,11 @@ async function render() {
 
   $("answer").textContent = answer({ col, levels: d.levels_hpa, place: state.place, variable: v, manifest });
   const b = brief({ col, levels: d.levels_hpa, place: state.place, variable: v, manifest });
-  $("lead").textContent = b.headline;
+  const lines = (text) => text.split(/(?<=\.) /).map((x) => `<span>${x}</span>`).join("");
+  $("lead").innerHTML = lines(b.headline);
   const top = Math.round(Math.max(...d.levels_hpa.map(kmOf)));
   $("sub").textContent = `Scroll to rise through ${Math.round(trend.span.years)} years of NASA measurements, from the ground to ${top} km up.`;
-  $("topTitle").textContent = b.up && b.down ? "One sky. Two directions." : b.headline;
+  $("topTitle").innerHTML = lines(b.up && b.down ? "One sky. Two directions." : b.headline);
   $("source").textContent = `${v.label}, ${b.where.charAt(0).toLowerCase() + b.where.slice(1)}. ${d.label}, ${trend.span.start.slice(0, 4)} to ${trend.span.end.slice(0, 4)}.`;
   const tile = (t, cls) => (t ? `<div class="stat ${cls}"><b>${fmt(col.slope[t.i])}</b><span>${v.trend_units_plain}</span><span>near ${Math.round(kmOf(d.levels_hpa[t.i]))} km · ${labelOf(manifest, col.verdict[t.i]).toLowerCase()}</span></div>` : "");
   $("stats").innerHTML = tile(b.up, "up") + tile(b.down, "down")
@@ -203,7 +204,7 @@ async function render() {
   renderPairs(await loadPairs(d.id, v.id, state.period, state.method).catch(() => null));
   if (live) await renderCase();
   writeUrl();
-  ascent?.update();
+  ascent?.sync();
 }
 
 function renderPairs(pairs) {

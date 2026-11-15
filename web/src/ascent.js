@@ -9,7 +9,8 @@ const START = 0.06, END = 0.94;
 
 export function initAscent({ section, stage, play, get, onSettle }) {
   const $ = (id) => document.getElementById(id);
-  let raf = 0, timer = 0, auto = 0, level = -1;
+  let raf = 0, timer = 0, auto = 0, level = -1, shown = -1;
+  const rail = $("rail"), rgb = (v, max) => color(v, max, 1).match(/\d+/g).slice(0, 3).join(" ");
 
   const progress = () => Math.max(0, Math.min(1, (window.scrollY - section.offsetTop) / Math.max(1, section.offsetHeight - window.innerHeight)));
   const nearest = (d, km) => d.levels.reduce((best, p, i) => (Math.abs(kmOf(p) - km) < Math.abs(kmOf(d.levels[best]) - km) ? i : best), 0);
@@ -23,9 +24,28 @@ export function initAscent({ section, stage, play, get, onSettle }) {
     const i = nearest(d, km), s = d.col.slope[i], v = d.col.verdict[i], proven = s != null && v != null && v !== VERDICT.NOT_PROVEN;
     level = phase === "climb" ? i : -1;
     stage.dataset.phase = phase;
-    stage.style.backgroundColor = phase === "climb" && proven ? color(s, d.scale.max, 0.09) : "transparent";
     $("skyMark")?.setAttribute("transform", `translate(0 ${d.scale.y(km).toFixed(1)})`);
-    if (phase !== "climb") return;
+
+    // Colour follows the climb. The rate is blended between the two nearest measured
+    // heights so the page shifts smoothly from warm to cool; unproven heights stay pale.
+    const order = d.levels.map((_, n) => n).sort((a, b) => kmOf(d.levels[a]) - kmOf(d.levels[b]));
+    const hiAt = order.findIndex((n) => kmOf(d.levels[n]) >= km), b = order[Math.max(0, hiAt)], a = order[Math.max(0, hiAt - 1)];
+    const span = kmOf(d.levels[b]) - kmOf(d.levels[a]), f = span > 0 ? (km - kmOf(d.levels[a])) / span : 0;
+    const sa = d.col.slope[a] ?? 0, sb = d.col.slope[hiAt < 0 ? a : b] ?? 0, blend = hiAt < 0 ? sa : sa + (sb - sa) * Math.max(0, Math.min(1, f));
+    const strength = Math.min(1, Math.abs(blend) / d.scale.max) * (proven ? 1 : 0.25);
+    const third = Math.max(1, Math.floor(order.length / 3)), mean = (list) => list.reduce((t, n) => t + (d.col.slope[n] ?? 0), 0) / list.length;
+    stage.style.setProperty("--tone", rgb(blend, d.scale.max));
+    stage.style.setProperty("--k", strength.toFixed(3));
+    stage.style.setProperty("--low", rgb(mean(order.slice(0, third)) * 2, d.scale.max));
+    stage.style.setProperty("--high", rgb(mean(order.slice(-third)) * 2, d.scale.max));
+    rail.style.transform = `scaleX(${p.toFixed(4)})`;
+    rail.style.opacity = p > 0 && p < 1 ? 1 : 0;
+    rail.style.backgroundColor = phase === "climb" && strength > 0.2 ? `rgb(${rgb(blend, d.scale.max)})` : "";
+    if (phase !== "climb") { shown = -1; return; }
+    if (i !== shown) {                                    // a new height: let the reading settle in
+      shown = i;
+      $("altBody").animate([{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], { duration: 280, easing: "cubic-bezier(.2,.7,.2,1)" });
+    }
     const at = kmOf(d.levels[i]);                          // the number shown is a height that was actually measured
     $("altKm").textContent = Math.round(at);
     const mark = d.content.landmarks.find((m) => Math.abs(m.km - at) < 1.6);
@@ -56,16 +76,40 @@ export function initAscent({ section, stage, play, get, onSettle }) {
     const from = section.offsetTop, to = from + section.offsetHeight - window.innerHeight, t0 = performance.now(), ms = 16000;
     play.textContent = "Pause";
     const tick = (t) => {
-      const k = Math.min(1, (t - t0) / ms);
-      window.scrollTo(0, from + (to - from) * k);
+      const k = Math.min(1, (t - t0) / ms), eased = k * k * (3 - 2 * k);          // ease in and out
+      window.scrollTo(0, from + (to - from) * eased);
       auto = k < 1 ? requestAnimationFrame(tick) : 0;
       if (!auto) play.textContent = "Play the ascent";
     };
     auto = requestAnimationFrame(tick);
   });
 
+  // Drag the column to scrub through the heights.
+  const sky = $("sky"), jump = (e) => {
+    const d = get(), box = sky.querySelector("svg")?.getBoundingClientRect();
+    if (!d || !box) return;
+    const km = Math.min(d.scale.maxKm, d.scale.kmAt(((e.clientY - box.top) / box.height) * d.scale.viewHeight));
+    window.scrollTo(0, section.offsetTop + (START + (km / d.scale.maxKm) * (END - START)) * (section.offsetHeight - window.innerHeight));
+  };
+  sky.addEventListener("pointerdown", (e) => { stop(); sky.setPointerCapture(e.pointerId); sky.dataset.drag = "1"; jump(e); });
+  sky.addEventListener("pointermove", (e) => { if (sky.dataset.drag) jump(e); });
+  for (const ev of ["pointerup", "pointercancel"]) sky.addEventListener(ev, () => { delete sky.dataset.drag; });
+
+  // Arrow keys step one measured height at a time.
+  window.addEventListener("keydown", (e) => {
+    if (!["ArrowUp", "ArrowDown"].includes(e.key) || e.target.closest?.("input, select, textarea, canvas, summary, button")) return;
+    const d = get(), p = progress();
+    if (!d || p >= 1 || window.scrollY < section.offsetTop - 10) return;
+    const order = d.levels.map((_, n) => n).sort((a, b) => kmOf(d.levels[a]) - kmOf(d.levels[b]));
+    const here = level < 0 ? (p < START ? -1 : order.length) : order.indexOf(level), next = here + (e.key === "ArrowUp" ? 1 : -1);
+    if (next < 0 || next >= order.length) return;
+    e.preventDefault();
+    const q = START + (kmOf(d.levels[order[next]]) / d.scale.maxKm) * (END - START);
+    window.scrollTo({ top: section.offsetTop + q * (section.offsetHeight - window.innerHeight) + 2, behavior: "smooth" });
+  });
+
   return {
-    update,
+    update, sync: frame,
     toLevel(i) {                                           // jump to one measured height
       const d = get(); if (!d) return;
       const q = START + (kmOf(d.levels[i]) / d.scale.maxKm) * (END - START);
