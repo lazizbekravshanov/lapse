@@ -18,7 +18,7 @@ def test_demo_round_trip(tmp_path, monkeypatch):
     (out / "trend" / "old" / "stale.json").write_text("{}")
 
     manifest = export.run(zonal, out, verbose=False)
-    assert manifest["schema"] == 2 and manifest["synthetic"] is True
+    assert manifest["schema"] == 3 and manifest["synthetic"] is True
     assert [d["id"] for d in manifest["datasets"]] == ["merra2", "airs"]
     assert not (out / "trend" / "old").exists()                 # stale output is removed
 
@@ -30,7 +30,7 @@ def test_demo_round_trip(tmp_path, monkeypatch):
     assert pair[("merra2", "airs_era")] == ("airs", "full")
     assert ("merra2", "full") not in pair                       # no second dataset before 2002
 
-    trend = json.loads((out / "trend/merra2/t/airs_era__none.json").read_text())
+    trend = json.loads((out / "trend/merra2/t/airs_era__none__robust.json").read_text())
     levels = np.array(merra["levels_hpa"])
     glob = trend["regions"]["global"]
     slope = np.array(glob["slope"], dtype=float)
@@ -46,13 +46,23 @@ def test_demo_round_trip(tmp_path, monkeypatch):
     assert codes <= {0, 1, 2, 3}
 
     # Before 2002 there is no witness, so nothing can be "clear".
-    full = json.loads((out / "trend/merra2/t/full__none.json").read_text())
+    full = json.loads((out / "trend/merra2/t/full__none__robust.json").read_text())
     assert 2 not in {v for row in full["verdict"] for v in row}
 
     series = json.loads((out / "series/airs/t/region_global.json").read_text())
     assert len(series["anom"][0]) == airs["time"]["n"]
 
-    pairs = json.loads((out / "pairs/airs/t/full.json").read_text())
+    # Every method in the hub wrote its own answer, and they agree on the planted signal.
+    catalog = json.loads((out / "catalog.json").read_text())
+    i500 = list(levels).index(500)
+    for m in catalog["methods"]:
+        other = json.loads((out / catalog["routes"]["trend"].format(
+            dataset="merra2", variable="t", period="airs_era", mask="none", method=m["id"])).read_text())
+        assert other["method"] == m["id"]
+        assert other["regions"]["global"]["slope"][i500] > 0.1
+    assert glob["agree"][i500] == len(catalog["sound_methods"]) == 3
+
+    pairs = json.loads((out / "pairs/airs/t/full__robust.json").read_text())
     top = pairs["vertical"][0]
     assert top["where"] == {"region": "global"}
     assert top["low"]["slope"] > 0 > top["high"]["slope"]

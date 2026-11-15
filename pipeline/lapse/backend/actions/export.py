@@ -16,9 +16,10 @@ import numpy as np
 
 from ... import config
 from ..data import cubes
+from ...hub import registry
 from ..operations import stats, verdict
 
-SCHEMA = 2
+SCHEMA = 3
 GENERATED = ("trend", "series", "pairs", "agreement")     # folders this module owns
 KEYS = ("slope", "lo", "hi", "p", "r1", "n")
 
@@ -92,16 +93,15 @@ def region_series(anom: np.ndarray, weights: np.ndarray) -> np.ndarray:
 
 # --- trends -------------------------------------------------------------------
 
-def _trend_many(series: np.ndarray, tidx: np.ndarray) -> dict:
-    """series[time, ...] -> dict of arrays shaped like series[0], plus q and sig."""
+def _trend_many(series: np.ndarray, tidx: np.ndarray, method) -> dict:
+    """series[time, ...] -> dict of arrays shaped like series[0], plus q and sig.
+
+    `method` is a tool from the hub registry. All methods share one interface.
+    """
     shape = series.shape[1:]
     flat = series.reshape(series.shape[0], -1)
-    out = {k: np.full(flat.shape[1], np.nan) for k in KEYS}
-    for c in range(flat.shape[1]):
-        res = stats.trend(flat[:, c], tidx, alpha=config.ALPHA, min_n=config.MIN_MONTHS)
-        for k in KEYS:
-            out[k][c] = res[k]
-    out = {k: v.reshape(shape) for k, v in out.items()}
+    out = method.run(flat, tidx, alpha=config.ALPHA, min_n=config.MIN_MONTHS)
+    out = {k: np.asarray(out[k], dtype=float).reshape(shape) for k in KEYS}
     out["q"] = stats.bh_qvalues(out["p"])
     out["sig"] = (out["q"] <= config.FDR_Q).astype(float)
     out["sig"][~np.isfinite(out["slope"])] = np.nan
@@ -119,6 +119,8 @@ def _pack(g: dict) -> dict:
         out["reason"] = _r(g["reason"], 0)
     if "step" in g:
         out["step"] = _r(g["step"], 2)
+    if "agree" in g:
+        out["agree"] = _r(g["agree"], 0)
     return out
 
 
@@ -276,33 +278,34 @@ def run(zonal_dir: Path | None = None, out_dir: Path | None = None, verbose: boo
                     keep = _keep(time, period, mask)
                     if keep.sum() < config.MIN_MONTHS:
                         continue
-                    with warnings.catch_warnings():
-                        warnings.simplefilter("ignore", RuntimeWarning)
-                        grid = _trend_many(anom[keep], tidx[keep])
-                        regs = {rid: _trend_many(s[keep], tidx[keep]) for rid, s in regional.items()}
-                    for key, g in [("grid", grid)] + list(regs.items()):
-                        if key in steps:
-                            g["step"] = steps[key][0]
-                            g["jump"] = verdict.jumps(g["slope"], decades, *steps[key])
-                    results[(ds.id, var.id, pid, mid)] = {
-                        "grid": grid, "regions": regs, "levels": levels, "span": span}
+                    for method in registry.METHODS.values():        # every tool, same data
+                        with warnings.catch_warnings():
+                            warnings.simplefilter("ignore", RuntimeWarning)
+                            grid = _trend_many(anom[keep], tidx[keep], method)
+                            regs = {rid: _trend_many(s[keep], tidx[keep], method) for rid, s in regional.items()}
+                        for key, g in [("grid", grid)] + list(regs.items()):
+                            if key in steps:
+                                g["step"] = steps[key][0]
+                                g["jump"] = verdict.jumps(g["slope"], decades, *steps[key])
+                        results[(ds.id, var.id, pid, mid, method.id)] = {
+                            "grid": grid, "regions": regs, "levels": levels, "span": span}
                     if verbose:
-                        print(f"  {ds.id}/{var.id} {pid}/{mid}: trends done  [{_time.time() - t0:.0f}s]")
+                        print(f"  {ds.id}/{var.id} {pid}/{mid}: {len(registry.METHODS)} methods done  [{_time.time() - t0:.0f}s]")
         if entry:
             entries.append(entry)
 
     # Pass 2: verdicts. Needs every trend first, because it compares them.
     witness = {}        # (dataset, variable, period) -> (other dataset, its period)
-    for (d, v, pid, mid), res in results.items():
-        for (d2, v2, pid2, mid2), other in results.items():
-            if d2 != d and v2 == v and mid2 == mid and _same_span(res["span"], other["span"]):
+    for (d, v, pid, mid, m), res in results.items():
+        for (d2, v2, pid2, mid2, m2), other in results.items():
+            if d2 != d and v2 == v and mid2 == mid and m2 == m and _same_span(res["span"], other["span"]):
                 witness[(d, v, pid)] = (d2, pid2)
 
-    for (d, v, pid, mid), res in results.items():
+    for (d, v, pid, mid, m), res in results.items():
         alt_mask = "none" if mid == config.EVENT_CHECK_MASK else config.EVENT_CHECK_MASK
-        alt = results.get((d, v, pid, alt_mask))
+        alt = results.get((d, v, pid, alt_mask, m))
         w = witness.get((d, v, pid))
-        other = results.get((w[0], v, w[1], mid)) if w else None
+        other = results.get((w[0], v, w[1], mid, m)) if w else None
 
         b = verdict.align_levels(other["grid"], other["levels"], res["levels"]) if other else None
         res["grid"]["verdict"], res["grid"]["reason"] = verdict.classify(
@@ -311,9 +314,24 @@ def run(zonal_dir: Path | None = None, out_dir: Path | None = None, verbose: boo
             b = verdict.align_levels(other["regions"][rid], other["levels"], res["levels"]) if other else None
             g["verdict"], g["reason"] = verdict.classify(g, alt["regions"][rid] if alt else None, b)
 
-    for (d, v, pid, mid), res in results.items():
+    # How many sound methods find a change in the same direction as this one?
+    def agreement(mine: dict, others: list) -> np.ndarray:
+        count = np.zeros(np.shape(mine["slope"]))
+        for o in others:
+            with np.errstate(invalid="ignore"):
+                count += (np.asarray(o["sig"]) > 0) & (np.sign(o["slope"]) == np.sign(mine["slope"]))
+        return np.where(np.isfinite(mine["slope"]), count, np.nan)
+
+    for (d, v, pid, mid, m), res in results.items():
+        sound = [results[(d, v, pid, mid, s_)] for s_ in registry.SOUND if (d, v, pid, mid, s_) in results]
+        res["grid"]["agree"] = agreement(res["grid"], [o["grid"] for o in sound])
+        for rid, g in res["regions"].items():
+            g["agree"] = agreement(g, [o["regions"][rid] for o in sound])
+
+    for (d, v, pid, mid, m), res in results.items():
         levels, grid = res["levels"], res["grid"]
         obj = _pack(grid)
+        obj["method"] = m
         obj["span"] = {"start": _month(res["span"][0]), "end": _month(res["span"][1]),
                        "years": round((res["span"][1] - res["span"][0] + 1) / 12.0, 1)}
         obj["flip_hpa"] = _r([stats.flip_pressure(grid["slope"][:, j], levels)
@@ -322,9 +340,10 @@ def run(zonal_dir: Path | None = None, out_dir: Path | None = None, verbose: boo
         for rid, g in res["regions"].items():
             obj["regions"][rid] = _pack(g)
             obj["regions"][rid]["flip_hpa"] = _num(stats.flip_pressure(g["slope"], levels))
-        _dump(out_dir / "trend" / d / v / f"{pid}__{mid}.json", obj)
+        where = {"dataset": d, "variable": v, "period": pid, "mask": mid, "method": m}
+        _dump(out_dir / registry.ROUTES["trend"].format(**where), obj)
         if mid == "none":
-            _dump(out_dir / "pairs" / d / v / f"{pid}.json", find_pairs(res, levels))
+            _dump(out_dir / registry.ROUTES["pairs"].format(**where), find_pairs(res, levels))
 
     manifest = {
         "schema": SCHEMA,
@@ -346,6 +365,7 @@ def run(zonal_dir: Path | None = None, out_dir: Path | None = None, verbose: boo
                     for (d, v, p), w in sorted(witness.items())],
     }
     _dump(out_dir / "manifest.json", manifest)
+    _dump(out_dir / "catalog.json", registry.catalog())
     if verbose:
         print(f"wrote {out_dir}  ({_time.time() - t0:.0f}s, synthetic={manifest['synthetic']})")
     return manifest

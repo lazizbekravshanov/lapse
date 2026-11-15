@@ -17,6 +17,7 @@ from functools import lru_cache
 
 import numpy as np
 from scipy.stats import norm
+from scipy.stats import t as student_t
 
 MONTHS_PER_DECADE = 120.0
 R1_MAX = 0.95
@@ -189,3 +190,104 @@ def jump_check(anom: np.ndarray, starts, ends, window: int = 24, min_valid: int 
         warnings.simplefilter("ignore", RuntimeWarning)
         usual = np.nanpercentile(np.abs(shift[~near]), 97.5, axis=0) if (~near).sum() > window else np.full(y.shape[1:], np.inf)
     return step, usual
+
+
+# --- many series at once ------------------------------------------------------
+# Every method below takes y[time, cells] and month indices t[time], and returns
+# a dict of arrays with one value per cell: slope, lo, hi (per decade), p, r1, n.
+# That shared shape is what lets the hub offer them as interchangeable tools.
+
+def sen_mk_many(y: np.ndarray, t: np.ndarray, alpha: float = 0.05, min_n: int = 24) -> dict:
+    """Theil-Sen slope with the memory-corrected Mann-Kendall test, cell by cell."""
+    y = np.asarray(y, dtype=float)
+    keys = ("slope", "lo", "hi", "p", "r1", "n")
+    out = {k: np.full(y.shape[1], np.nan) for k in keys}
+    for c in range(y.shape[1]):
+        res = trend(y[:, c], t, alpha=alpha, min_n=min_n)
+        for k in keys:
+            out[k][c] = res[k]
+    return out
+
+
+def _lag1_many(resid: np.ndarray, t: np.ndarray, step: int = 1) -> np.ndarray:
+    """Lag-1 autocorrelation per cell, from pairs of consecutive time steps."""
+    consecutive = np.diff(t) == step
+    a, b = resid[:-1][consecutive], resid[1:][consecutive]
+    ok = np.isfinite(a) & np.isfinite(b)
+    cnt = ok.sum(axis=0)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        am = np.where(ok, a, 0.0).sum(axis=0) / cnt
+        bm = np.where(ok, b, 0.0).sum(axis=0) / cnt
+        da, db = np.where(ok, a - am, 0.0), np.where(ok, b - bm, 0.0)
+        r = (da * db).sum(axis=0) / np.sqrt((da * da).sum(axis=0) * (db * db).sum(axis=0))
+    return np.where((cnt >= 10) & np.isfinite(r), r, 0.0)
+
+
+def _ols_fit(y: np.ndarray, t: np.ndarray):
+    """Least-squares line per cell, ignoring missing months. Returns the pieces."""
+    y = np.asarray(y, dtype=float)
+    tt = np.asarray(t, dtype=float)[:, None]
+    ok = np.isfinite(y)
+    n = ok.sum(axis=0).astype(float)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        tbar = (ok * tt).sum(axis=0) / n
+        ybar = np.where(ok, y, 0.0).sum(axis=0) / n
+        dt = np.where(ok, tt - tbar, 0.0)
+        sxx = (dt * dt).sum(axis=0)
+        slope = (dt * np.where(ok, y - ybar, 0.0)).sum(axis=0) / sxx
+        resid = np.where(ok, y - ybar - slope * (tt - tbar), np.nan)
+    return slope, resid, dt, sxx, n
+
+
+def ols_many(y: np.ndarray, t: np.ndarray, alpha: float = 0.05, min_n: int = 24, memory: bool = True,
+             step: int = 1) -> dict:
+    """Least-squares slope with a t-test.
+
+    memory=True shrinks the number of independent months for month-to-month memory
+    (effective sample size). memory=False is the plain textbook test.
+    """
+    slope, resid, dt, sxx, n = _ols_fit(y, t)
+    r1 = _lag1_many(resid, np.asarray(t), step)
+    r1c = np.clip(r1, 0.0, R1_MAX) if memory else np.zeros_like(r1)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        se = np.sqrt(np.nansum(resid ** 2, axis=0) / (n - 2) / sxx)
+        n_eff = n * (1.0 - r1c) / (1.0 + r1c)
+        df = np.maximum(n_eff - 2.0, 1.0)
+        se = se * np.sqrt((n - 2.0) / df)
+        p = 2.0 * student_t.sf(np.abs(slope / se), df)
+        half = student_t.ppf(1.0 - alpha / 2.0, df) * se
+    out = {"slope": slope * MONTHS_PER_DECADE, "lo": (slope - half) * MONTHS_PER_DECADE,
+           "hi": (slope + half) * MONTHS_PER_DECADE, "p": p, "r1": r1, "n": n}
+    return _blank_short(out, min_n)
+
+
+def yearly_many(y: np.ndarray, t: np.ndarray, alpha: float = 0.05, min_n: int = 24,
+                min_months: int = 6, min_years: int = 10) -> dict:
+    """Average each calendar year first, then fit a line through the yearly values.
+
+    Yearly averages carry far less memory than months, so the ordinary t-test (with
+    the same memory correction) is close to honest. A year needs `min_months` months
+    of data to count.
+    """
+    y = np.asarray(y, dtype=float)
+    t = np.asarray(t)
+    years = t // 12
+    labels = np.unique(years)
+    annual = np.full((labels.size, y.shape[1]), np.nan)
+    for k, yr in enumerate(labels):
+        block = y[years == yr]
+        have = np.isfinite(block).sum(axis=0)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            mean = np.where(np.isfinite(block), block, 0.0).sum(axis=0) / have
+        annual[k] = np.where(have >= min_months, mean, np.nan)
+    out = ols_many(annual, labels * 12 + 6, alpha=alpha, min_n=max(min_years, min_n // 12), step=12)
+    out["n"] = np.isfinite(y).sum(axis=0).astype(float)          # months behind the yearly values
+    return out
+
+
+def _blank_short(out: dict, min_n: int) -> dict:
+    """Cells with too few months get no result."""
+    short = ~(out["n"] >= min_n) | ~np.isfinite(out["slope"])
+    for k in ("slope", "lo", "hi", "p", "r1"):
+        out[k] = np.where(short, np.nan, out[k])
+    return out

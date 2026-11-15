@@ -1,7 +1,7 @@
-# Data contract (schema 2)
+# Data contract (schema 3)
 
-The pipeline writes these files into `web/data/`. The website reads them and
-`web/content/glossary.json`, and nothing else. The website never computes a trend,
+The backend writes these files into `web/data/`. The hub's router and the website
+both read them, plus `web/content/glossary.json`, and nothing else. The website never computes a trend,
 a range or a label.
 
 All grids are `[level][lat]`: the outer list follows `levels_hpa` of the dataset,
@@ -10,11 +10,26 @@ the inner list follows `lat_centers`. Missing values are `null`.
 `python -m lapse export` deletes and rewrites `trend/`, `series/` and `pairs/`
 on every run, so no stale file survives.
 
+## catalog.json (the hub's tool catalog)
+
+| Key | Meaning |
+|---|---|
+| `methods[]` | `id`, `label`, `plain`, `science`, `sound`, `recommended`, `caution`. Every method answers in the same form. |
+| `checks[]` | `id`, `label`, `plain`, `science`. Checks that run whatever method is chosen. |
+| `sound_methods` | Ids of the methods that count toward agreement. |
+| `defaults` | The choices Auto makes: `method`, `mask`, and `auto` for `dataset` and `period`. |
+| `auto` | Plain-language rule for each automatic choice. |
+| `routes` | Path templates: `trend`, `pairs`, `series_region`, `series_lat`. Clients build paths from these. |
+
+A request is `{dataset, variable, period, mask, method, place, height}`. Its answer is at
+`routes.trend` filled with the first five. `lapse.hub.router` resolves "auto" values and
+reads the answer; the website does the same in the browser.
+
 ## manifest.json
 
 | Key | Meaning |
 |---|---|
-| `schema` | Contract version. Now `2`. |
+| `schema` | Contract version. Now `3`. |
 | `synthetic` | `true` if any cube was synthetic. The site must show a banner. |
 | `method` | `alpha`, `fdr_q`, slope and test names, `event_check_mask`, `event_change_limit`, `jump_share`. |
 | `lat_centers`, `lat_step` | Latitude band centres in degrees, and the band width. |
@@ -52,10 +67,11 @@ on every run, so no stale file survives.
 | 8 | `data_change` | Disputed |
 | 9 | `witness_jumps` | Likely change |
 
-## trend/{dataset}/{variable}/{period}__{mask}.json
+## trend/{dataset}/{variable}/{period}__{mask}__{method}.json
 
 | Key | Shape | Meaning |
 |---|---|---|
+| `method` | text | The method id that produced this file. |
 | `span` | object | `start`, `end`, `years` actually covered. |
 | `slope` | grid | Trend per decade. |
 | `lo`, `hi` | grid | 95% range of the slope. |
@@ -63,6 +79,7 @@ on every run, so no stale file survives.
 | `sig` | grid | `1` if `q <= fdr_q`, else `0`. |
 | `r1`, `n` | grid | Month-to-month memory of the residuals, and months used. |
 | `verdict`, `reason` | grid | Codes from the two tables above. |
+| `agree` | grid | How many sound methods pass the test with the same sign as this file. |
 | `step` | grid | Only for datasets with data-source changes: the largest jump at such a change. |
 | `flip_hpa` | per lat | Pressure where the trend turns from positive below to negative above. |
 | `regions` | object | One entry per region id. Same keys, each a list per level, plus one `flip_hpa`. |
@@ -72,7 +89,7 @@ on every run, so no stale file survives.
 `anom`: `[level][month]` values compared with normal for that month. Months start at
 `datasets[].time.start` and run for `time.n` months with no gaps.
 
-## pairs/{dataset}/{variable}/{period}.json
+## pairs/{dataset}/{variable}/{period}__{method}.json
 
 Places where two "Likely" or "Clear" trends point in opposite directions (mask `none`).
 
