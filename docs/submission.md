@@ -95,4 +95,4 @@ Fill in according to the event rules.
 ## Links
 
 - Code: https://github.com/lazizbekravshanov/lapse
-- Site: add the GitHub Pages address once Pages is turned on.
+- Site: https://lazizbekravshanov.github.io/lapse/

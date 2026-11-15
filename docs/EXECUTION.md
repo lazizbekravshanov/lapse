@@ -19,7 +19,7 @@ the task is called done. Do the tasks in order. Commit after every task.
 | T5 Guided start | Done | Three questions, shareable address for every view |
 | T6 Case files and validation | Done | `docs/validation.md`, five published results checked |
 | T7 Methods page | Done | `web/methods.html` |
-| T8 Deploy | Workflow written | **Owner:** Settings > Pages > Source: GitHub Actions |
+| T8 Deploy | Done | Live at https://lazizbekravshanov.github.io/lapse/. Every push to main that changes `web/` redeploys |
 | T9 Submission pack | Drafted | `docs/submission.md`, `docs/pitch.md`. Video is the owner's |
 | T10 User tests | Open | Needs three people. Sheet in `docs/user-tests.md` |
 | T11 Opposite-pair finder | Done | Listed under the charts |
@@ -98,7 +98,7 @@ with some science background.
 - [ ] Two independent datasets are compared, and disagreements are shown, not hidden.
 - [ ] Three case files work as guided demos.
 - [ ] A validation table compares our numbers with published science.
-- [ ] The site is deployed at a public URL.
+- [x] The site is deployed at a public URL: https://lazizbekravshanov.github.io/lapse/
 - [ ] The submission text, a 30-second pitch and a demo video script exist.
 
 ---
