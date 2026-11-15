@@ -36,6 +36,15 @@ catalog; the user chooses or leaves it on Auto) -> frontend (charts and plain la
 The challenge names the t-test, the Mann-Kendall test and confidence intervals; Lapse offers
 all three as interchangeable tools and shows whether the choice changes the answer.
 
+The hub has a second door: an agent that answers questions in plain words. It can only
+call the hub's read-only tools, a check rejects any answer containing a number that no
+tool produced, and every answer lists the NASA product and file it came from. It works
+with no AI model at all, and the same tools are offered to outside assistants over MCP
+(`docs/agent.md`).
+
+Every published number can be recomputed from the repository with one command and no
+NASA login (`make verify`).
+
 ## What is new
 
 - **Height.** The challenge text mentions trends at "levels of the atmosphere". We found
@@ -70,7 +79,8 @@ direction but a larger size, at heights where our own jump check distrusts MERRA
 - Values are averages around the whole Earth, not local.
 - A trend shows what changed, not why. The one cause we name is cited.
 - Kilometres are converted from pressure and are approximate.
-- MERRA-2 water vapor is shown only up to about 16 km.
+- MERRA-2 water vapor is shown only up to about 8 km, the height up to which it takes in humidity measurements.
+- We read every 2nd (AIRS) or 4th (MERRA-2) grid point before averaging, and one MERRA-2 month is missing.
 
 ## Prepared before the event
 

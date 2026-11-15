@@ -64,10 +64,17 @@
       <li><strong>Your town.</strong> Every value is an average around the whole Earth at one distance from the equator.</li>
       <li><strong>The future.</strong> A trend describes the years measured. It does not promise the same pace ahead.</li>
       <li><strong>Exact heights.</strong> Satellites measure by air pressure. Our kilometres are a close conversion, not exact.</li>
-      <li><strong>Water vapor high up.</strong> MERRA-2 cannot show real change in water vapor above about 16 km, so we do not show it.</li>
+      <li><strong>Water vapor high up.</strong> We show water vapor only up to about 8 km. MERRA-2 takes in humidity measurements up to that height. Higher up its water vapor comes from the model, and in the stratosphere it is held close to a fixed yearly pattern, so a trend there would not be a measurement (Davis and others, Atmospheric Chemistry and Physics, 2017).</li>
+      <li><strong>Fine detail.</strong> To keep downloads small we read every second grid point of AIRS and every fourth of MERRA-2 before averaging around the Earth. Each band still averages thousands of points a month, but we have not measured how much this thinning changes a trend.</li>
+      <li><strong>Missing spots.</strong> Where a satellite could not see (for example below mountain tops, or through thick cloud), the average around the Earth uses only the places it could see. Daytime and night-time passes count equally, whatever their number of measurements.</li>
+      <li><strong>One missing month.</strong> MERRA-2 for June 1998 failed to download and is left out. A trend over 46 years does not depend on one month, but it sits next to a data-source change that our jump check examines.</li>
+      <li><strong>The jump check is ours.</strong> Its thresholds are our own rule of thumb, not a published standard. It errs toward calling a result "Disputed".</li>
     </ul>
 
-    <h2>7. Words we use</h2>
+    <h2>7. Ask it in your own words</h2>
+    <p>The same results can be asked for in plain language, from a terminal or from an AI assistant such as Claude. The assistant can only read the files this site reads. A check rejects any answer containing a number that did not come from those files, and every answer lists the files it used. It also works with no AI model at all. See <a href="https://github.com/lazizbekravshanov/lapse/blob/main/docs/agent.md">how the agent works</a>.</p>
+
+    <h2>8. Words we use</h2>
     <dl id="glossary" class="words-list"></dl>
   </article>
 

@@ -1,4 +1,4 @@
-"""Command line: lapse fetch | assemble | inspect | export | validate | tools | ask | synth | demo"""
+"""Command line: lapse fetch | assemble | inspect | export | verify | validate | tools | ask | agent | mcp | synth | demo"""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ def main(argv=None) -> None:
     p = sub.add_parser("synth", help="write synthetic zonal cubes (no NASA login needed)")
     p.add_argument("--force", action="store_true", help="overwrite real NASA cubes")
     sub.add_parser("export", help="compute trends and write web/data")
+    sub.add_parser("verify", help="recompute every published number from data/zonal and compare (no login needed)")
     sub.add_parser("validate", help="compare our numbers with published results")
     sub.add_parser("tools", help="list every tool in the hub catalog")
     p = sub.add_parser("ask", help="ask the hub a question; anything left out is chosen for you")
@@ -24,6 +25,12 @@ def main(argv=None) -> None:
     p.add_argument("--method", default="auto", help="robust, classic, yearly, textbook or auto")
     p.add_argument("--years", default="auto", help="full, airs_era or auto")
     p.add_argument("--months", default="none", help="none, no_hunga or no_volcano")
+    p = sub.add_parser("agent", help="ask in your own words; answers come only from the NASA data")
+    p.add_argument("question", nargs="*", help="leave empty for a conversation")
+    p.add_argument("--model", help="auto (default), rules, anthropic, openrouter, openai, ollama or custom")
+    p.add_argument("--steps", action="store_true", help="show every tool call")
+    p.add_argument("--json", action="store_true", help="print the full result as JSON")
+    sub.add_parser("mcp", help="serve the tools to an MCP client (Claude Desktop, Claude Code) over stdio")
     p = sub.add_parser("demo", help="synth + export in one go")
     p.add_argument("--force", action="store_true", help="overwrite real NASA cubes")
 
@@ -55,6 +62,10 @@ def main(argv=None) -> None:
     if args.cmd in ("export", "demo"):
         from .backend.actions import export
         export.run()
+    if args.cmd == "verify":
+        from .backend.actions import verify
+        if not verify.run()["ok"]:
+            raise SystemExit(1)
     if args.cmd == "validate":
         from .backend.actions import validate
         validate.run()
@@ -83,6 +94,31 @@ def main(argv=None) -> None:
         print(f"  tools: data={r['dataset']} method={r['method']} years={r['period']} months={r['mask']}"
               + (f"  (auto chose: {', '.join(r['chosen_by_auto'])})" if r["chosen_by_auto"] else ""))
         print(f"  file:  web/data/{out['route']}")
+    if args.cmd == "agent":
+        import json
+
+        from .agent import harness, tools
+        site = tools.Site()
+
+        def ask(question):
+            result = harness.run(question, args.model, site)
+            print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False) if args.json else result.text(args.steps))
+
+        if args.question:
+            ask(" ".join(args.question))
+        else:
+            print("Ask about air temperature, water vapor or ozone at any height. Empty line to stop.")
+            while True:
+                try:
+                    question = input("\n> ").strip()
+                except (EOFError, KeyboardInterrupt):
+                    break
+                if not question:
+                    break
+                ask(question)
+    if args.cmd == "mcp":
+        from .agent import mcp_server
+        mcp_server.serve()
     if args.cmd == "inspect":
         from .backend.data import fetch
         fetch.inspect(args.dataset)

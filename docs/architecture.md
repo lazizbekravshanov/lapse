@@ -1,6 +1,7 @@
 # Architecture
 
-Three layers. Each one only talks to the layer next to it.
+Three layers. Each one only talks to the layer next to it. The hub has two doors:
+the website for people, and the agent for plain-language questions and other AI assistants.
 
 ```mermaid
 flowchart LR
@@ -18,10 +19,14 @@ flowchart LR
   subgraph F["3. Frontend: web/"]
     U["toolbox, charts, plain-language answer"]
   end
+  subgraph G["Agent door: pipeline/lapse/agent"]
+    X["read-only tools, number guard,<br/>harness, MCP server"]
+  end
   R --> A
   A -->|"web/data: catalog.json, manifest.json, trend, series, pairs"| T
   A -->|"same files"| U
   T --> U
+  T --> X
 ```
 
 ## 1. Backend: data, operations, actions
@@ -60,7 +65,7 @@ toolbox and the methods page all read the registry, so nothing else changes.
 ```bash
 python -m lapse tools
 python -m lapse ask --where arctic --km 32
-python -m lapse ask --what qv --where tropics --km 11 --method classic
+python -m lapse ask --what qv --where tropics --km 5 --method classic
 ```
 
 ### Ask the hub from Python
@@ -70,12 +75,32 @@ from lapse.hub import router
 router.answer({"what": "t", "where": "global", "km": 32, "method": "yearly"})
 ```
 
+### Auto is decided in one place
+
+`hub/registry.auto_choices` holds the two Auto rules (satellite first; the years two
+datasets share). The export publishes the result as `manifest.auto`. The router, the
+website and the agent read it. None of them works it out again.
+
+## The agent door
+
+`pipeline/lapse/agent/` lets a language model, or no model at all, answer questions in
+plain words. It is bound by three rules: it can only call the read-only tools in
+`agent/tools.py`; every number in its answer must come from a tool result
+(`agent/guard.py`); and an answer with no data behind it is never shown. The same tools
+are served to outside assistants over MCP. Details: [agent.md](agent.md).
+
 ## 3. Frontend: visualize and explain
 
 `web/` is a static site with no build step. It reads `catalog.json` to draw the toolbox,
 builds file paths from the catalog's routes, and never computes a trend, a range or a
 label. Plain words come from `web/content/glossary.json` and from the label texts in
 `pipeline/lapse/config.py`.
+
+## Reproducible
+
+The four reduced cubes are in `data/zonal` (about 11 MB). `python -m lapse verify`
+recomputes every published file from them and compares, number by number. GitHub runs
+it on every push, so the site cannot drift from the code.
 
 ## Why precomputed
 

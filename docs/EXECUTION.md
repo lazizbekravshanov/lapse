@@ -37,7 +37,27 @@ The project is now organised as backend -> hub -> frontend (see `docs/architectu
 | Hub router: resolves "auto", reads the published answer, `python -m lapse ask` | Done |
 | Every method precomputed for every view (schema 3, `catalog.json`) | Done |
 | Frontend toolbox, Auto, and "does the method change the answer?" table | Done |
-| 38 tests, including false-alarm rates for every method | Pass |
+| 38 tests at the time, including false-alarm rates for every method | Pass |
+
+### Added Saturday night: backend hardening and the agent door
+
+| Piece | State |
+|---|---|
+| The four reduced NASA cubes committed (`data/zonal`, about 11 MB) | Done |
+| `python -m lapse verify`: recompute every published number and compare | Done. 3.7 million numbers, 0 differences |
+| GitHub runs the tests and `verify` on every push (`.github/workflows/tests.yml`) | Written |
+| Auto rules in one place (`registry.auto_choices` -> `manifest.auto`, schema 4) | Done |
+| Water vapor limit lowered from 16 km to 8 km, with the published reason | Done |
+| Limits named on the methods page: grid thinning, missing spots, the missing month, the jump check | Done |
+| Agent: 11 read-only tools over the hub (`pipeline/lapse/agent/tools.py`) | Done |
+| Number guard: no number reaches the reader unless a tool produced it | Done |
+| Harness with a no-model fallback, `python -m lapse agent` | Done. Works with no API key |
+| MCP server, `python -m lapse mcp` | Done. Checked with the official MCP client |
+| Adapters for Claude and OpenAI-style servers | Written. Not yet run against a live model |
+| 85 tests | Pass |
+
+Open for the owner: run the agent once with a real model key; fill June 1998
+(`python -m lapse fetch merra2 && python -m lapse export`).
 
 What the methods say on real data (AIRS, whole globe): all three sound methods agree at 16
 of 24 heights, and at every height from 25 km to 41 km. The textbook method flags 607 of
@@ -55,7 +75,8 @@ of 24 heights, and at every height from 25 km to 41 km. The textbook method flag
   changed in 2004. The jump check labels those heights "Disputed" without being told where to look.
 - **The 2022 volcano does not explain the cooling.** In the southern middle latitudes at 32 km the trend
   moves from -0.77 to -0.70 without the Hunga months.
-- **Water vapor** is shown only up to about 16 km, because MERRA-2 cannot show real change above that.
+- **Water vapor** is shown only up to about 8 km (300 hPa). MERRA-2 takes in humidity measurements
+  only up to there (Davis et al., 2017, Table 2).
 
 ---
 
