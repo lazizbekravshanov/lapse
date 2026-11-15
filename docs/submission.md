@@ -29,6 +29,13 @@ open the exact numbers.
 The challenge also suggests demonstration examples and simple definitions. Lapse has
 three guided case files and a "Words we use" section on every page.
 
+## How it is built
+
+Backend (NASA data, operations, actions) -> hub (every data source, method and check in one
+catalog; the user chooses or leaves it on Auto) -> frontend (charts and plain language).
+The challenge names the t-test, the Mann-Kendall test and confidence intervals; Lapse offers
+all three as interchangeable tools and shows whether the choice changes the answer.
+
 ## What is new
 
 - **Height.** The challenge text mentions trends at "levels of the atmosphere". We found
@@ -37,6 +44,9 @@ three guided case files and a "Words we use" section on every page.
   air and found automatically in a list of opposite pairs.
 - **Labels that can say "we don't know".** "Not proven yet" and "Disputed" are first-class
   answers, with the reason given.
+- **A toolbox, not one fixed method.** Four methods behind one interface. On made-up records with
+  no trend, the three sound ones raise a false alarm 3 to 8 times in 100; the plain textbook
+  test does 30 to 65. Visitors can see that difference themselves.
 - **It caught a known data problem by itself.** The jump check flags MERRA-2 above about
   40 km, where its record steps by several degrees when its input satellites changed.
 

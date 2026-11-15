@@ -29,6 +29,22 @@ The direction flips at about 19 km. Our upper-level cooling for 2003 to 2012 is 
 decade; the published value for the same years and heights is -0.65 ± 0.11
 ([docs/validation.md](docs/validation.md)).
 
+## How it is built
+
+Three layers ([docs/architecture.md](docs/architecture.md)):
+
+| Layer | Where | Job |
+|---|---|---|
+| **Backend** | `pipeline/lapse/backend/` | Data (NASA download), operations (trends, tests, checks), actions (export, validate). |
+| **Hub** | `pipeline/lapse/hub/` | Every tool in one catalog. The user picks a data source and a method, or leaves it on Auto. One request shape in, one answer shape out. |
+| **Frontend** | `web/` | The toolbox, the charts and the answer in plain language. |
+
+```bash
+python -m lapse tools                              # everything the hub offers
+python -m lapse ask --where arctic --km 32         # Auto picks the tools
+python -m lapse ask --where global --km 1 --method yearly
+```
+
 ## What you see
 
 | Part | Question it answers |
@@ -39,6 +55,7 @@ decade; the published value for the same years and heights is -0.65 ± 0.11
 | **Month by month** | The history behind any one point, with volcanoes and data-source changes shaded. |
 | **Case files** | Three guided demos: one cause with opposite trends, a volcano in the record, a jump in the data source. |
 | **Opposite trends** | A list of places where one part of the air rises while another falls. |
+| **The toolbox** | Every data source, method and check in one place. Pick your own or leave it on Auto, and see whether the method changes the answer. |
 
 ## The four labels
 
@@ -53,7 +70,7 @@ decade; the published value for the same years and heights is -0.65 ± 0.11
 
 ```bash
 make setup     # install
-make test      # 32 tests
+make test      # 38 tests
 make demo      # synthetic data -> web/data  (about a minute)
 make serve     # http://localhost:8000
 ```
@@ -86,8 +103,10 @@ Downloads are resumable: every month is cached, so rerunning continues where it 
 ## How the numbers are made
 
 1. Remove the seasonal cycle: each month minus that calendar month's average.
-2. **Slope:** Theil-Sen, the median slope over every pair of months.
-3. **Significance:** Mann-Kendall, with the variance widened for month-to-month memory.
+2. **Slope and test:** the chosen method. Robust (Theil-Sen with Mann-Kendall) is the default.
+   Classic (least squares with a t-test) and Year by year (annual means) are the other sound ones.
+3. **Memory:** every sound method allows for month-to-month memory. On made-up records with no
+   trend they raise a false alarm 3 to 8 times in 100; the plain textbook test does 30 to 65.
 4. **Many cells at once:** Benjamini-Hochberg false discovery rate of 0.05.
 5. **Second dataset:** AIRS and MERRA-2 are compared wherever they share years and heights.
 6. **Volcano check:** every trend is recomputed without the months after big eruptions.
@@ -101,16 +120,15 @@ The website does no statistics of its own.
 ## Layout
 
 ```
-pipeline/lapse/config.py     datasets, variables, regions, events, label words (edit this first)
-pipeline/lapse/fetch.py      NASA catalog + OPeNDAP download -> monthly cache -> zonal cubes
-pipeline/lapse/stats.py      trend, significance, false discovery rate, jump check
-pipeline/lapse/verdict.py    the four-label rules
-pipeline/lapse/export.py     cubes -> web/data JSON (trends, regions, labels, opposite pairs)
-pipeline/lapse/validate.py   our numbers against published results
-pipeline/lapse/synthetic.py  fake cubes, for development and tests only
-web/                         static site, no build step
-web/content/glossary.json    the plain words, landmarks and layer names
-docs/                        execution plan, data contract, validation, submission, pitch
+pipeline/lapse/config.py                 datasets, variables, regions, events, label words
+pipeline/lapse/backend/data/             fetch.py (NASA catalog + OPeNDAP), cubes.py, synthetic.py
+pipeline/lapse/backend/operations/       stats.py (methods, tests, jump check), verdict.py (label rules)
+pipeline/lapse/backend/actions/          export.py (cubes -> web/data), validate.py
+pipeline/lapse/hub/registry.py           the tool catalog: methods and checks in plain words
+pipeline/lapse/hub/router.py             resolves a request, reads back the answer
+web/                                     static site, no build step
+web/content/glossary.json                the plain words, landmarks and layer names
+docs/                                    architecture, data contract, validation, plan, submission, pitch
 ```
 
 ## Limits

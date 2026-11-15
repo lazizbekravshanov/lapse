@@ -24,6 +24,7 @@ the data cannot tell, it says "Not proven yet".
 | 0:50 | Click **One cause, opposite trends**, then **Next** three times. | "Near the ground: clear warming. At 32 km: clear cooling. In between: not proven yet, and we say so." |
 | 1:15 | On the last step, point at the dashed orange line. | "A second, independent NASA dataset. Same shape. That is what makes a change 'Clear'." |
 | 1:30 | Click **When the data source jumps**, then **Next**. | "Here the second dataset drops 2.7 degrees in one step, when its satellites changed. Lapse caught that by itself and labels it 'Disputed'." |
+| 1:40 | Scroll to **The toolbox**. Click **Textbook, no memory**, then **Auto**. | "Every method in one place. Pick the textbook test and far more turns 'proven'. Our default allows for the air's memory. The table shows when the method changes the answer." |
 | 1:50 | Click **How it works**, scroll to the validation table. | "Our number for the upper air, 2003 to 2012: minus 0.65. The published number: minus 0.65." |
 | 2:00 | Stop. | "Lapse: what is changing in the air, at which height, and how sure we are." |
 

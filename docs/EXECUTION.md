@@ -26,6 +26,23 @@ the task is called done. Do the tasks in order. Commit after every task.
 | T12 Phone layout and keyboard | Done | One column under 860 px, arrow keys on both charts |
 | T13, T14 | Not started | Stretch only |
 
+### Added Saturday evening: three layers and the hub
+
+The project is now organised as backend -> hub -> frontend (see `docs/architecture.md`).
+
+| Piece | State |
+|---|---|
+| Backend split into `data`, `operations`, `actions` | Done |
+| Hub registry: 2 data sources, 4 methods, 4 checks, described in plain words | Done |
+| Hub router: resolves "auto", reads the published answer, `python -m lapse ask` | Done |
+| Every method precomputed for every view (schema 3, `catalog.json`) | Done |
+| Frontend toolbox, Auto, and "does the method change the answer?" table | Done |
+| 38 tests, including false-alarm rates for every method | Pass |
+
+What the methods say on real data (AIRS, whole globe): all three sound methods agree at 16
+of 24 heights, and at every height from 25 km to 41 km. The textbook method flags 607 of
+862 cells where the sound methods flag 324 to 424.
+
 ### What the real data showed
 
 - **AIRS, whole globe, 2002 to 2026:** warming of +0.24 °C per ten years near 1 km and +0.27 near 8 km,
