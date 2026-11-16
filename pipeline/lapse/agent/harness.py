@@ -205,5 +205,8 @@ def run(question: str, model=None, site: tools.Site | None = None,
         return _loop(question, model, site, max_steps, max_repairs)
     except ModelError as exc:
         result = _loop(question, Planner(site), site, max_steps, max_repairs)
-        result.notes.insert(0, f"The language model failed ({exc}). This answer was written by rule instead.")
+        busy = " answered 429" in str(exc)                 # the provider's rate or daily limit, not a fault
+        result.notes.insert(0, "The language model has reached its usage limit for now, so this answer was written by rule. "
+                               "Every number is still checked against the data." if busy
+                            else f"The language model failed ({exc}). This answer was written by rule instead.")
         return result

@@ -238,7 +238,7 @@ AI tools: see the next field.
 
 Edit this so that every sentence is true for you before pasting.
 
-Yes. AI tools were used in three ways.
+Yes. AI tools were used in four ways.
 
 1. **Writing the code and text.** Most of the code (the data pipeline, the statistics, the
    tests, the website and the agent) and most of the text were written with Claude, an AI
@@ -250,6 +250,9 @@ Yes. AI tools were used in three ways.
    rejects any answer containing a number that no tool produced, and off-topic questions
    are declined. With no AI model connected the box still answers, by rule.
 3. **Design drafts.** Layout drafts in Figma were produced with the same AI assistant.
+4. **The demo video.** The voice is mine. The picture is the real site filmed frame by
+   frame, and the AI assistant cut it to the voice and added the subtitles. Nothing in the
+   video is AI-generated imagery.
 
 No number on the site was written by an AI. Each one is computed by the tested pipeline
 from NASA data, and one command recomputes them all from the repository. No AI-generated

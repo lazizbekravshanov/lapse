@@ -5,18 +5,15 @@
 The rules: 30 seconds at most, English subtitles, hosted on an outside site (YouTube, Google
 Drive) with a link anyone can open. A longer video is not eligible for Global Judging.
 
-Record the screen at the live site, https://lapse-earth.vercel.app, in a desktop window.
-"Play the ascent" takes 16 seconds, so for the climb either scroll by hand at a steady pace
-or record Play and speed that clip up. 74 words is a calm pace for 30 seconds.
+The video as recorded is 25 seconds: the site filmed frame by frame, the team's own voice,
+and the spoken words as subtitles.
 
 | Time | On screen | Words (also the subtitles) |
 |---|---|---|
 | 0:00 | Front page: "Warming below. Cooling above." | I'm Lazizbek, team Lapse. Is the air warming? It depends how high you look. |
-| 0:05 | The climb. Red at the bottom turns to blue. The big number counts up through 8, 19, 32 km. | Twenty-four years of NASA satellite data. Near the ground, warming. Past 19 kilometres it flips. At 32, it cools more than twice as fast. |
-| 0:16 | The top: "One sky. Two directions." Then the ask box with one answer and its "Every number traced to the data" tick. | Every height gets an honest label, from "clear change" to "not proven yet". Ask a question, and every number is checked against NASA's records. |
-| 0:25 | End card: lapse-earth.vercel.app | Lapse. What is changing, at which height, and how sure we are. |
-
-Before uploading: watch it once with the sound off. The subtitles alone should carry it.
+| 0:07 | The climb. Red at the bottom, a pause at 19 km where the direction flips, blue at 32 km. | In NASA satellite data, the air near the ground is warming. Past nineteen kilometres it flips. Higher up, it cools twice as fast. |
+| 0:16 | The top: "One sky. Two directions." Then the ask box with one answer and its "Every number traced to the data" tick. | Every height gets an honest label, and every answer is checked against NASA's records. |
+| 0:22 | End card: lapse-earth.vercel.app | This is Lapse. |
 
 ## 2-minute demo, click by click
 

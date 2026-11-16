@@ -186,6 +186,13 @@ def test_harness_survives_a_broken_model(data, monkeypatch):
     out = harness.run("Is the Arctic warming?", Broken(), data)
     assert out.answered and out.checked and out.model.startswith("rules")
     assert "answered 401" in out.notes[0] and "written by rule" in out.notes[0]
+
+    class Busy(Broken):
+        def step(self, *a):
+            raise ModelError("The gemini server answered 429")
+
+    out = harness.run("Is the Arctic warming?", Busy(), data)
+    assert out.answered and out.checked and "usage limit" in out.notes[0] and "429" not in out.notes[0]
     for env in ("ANTHROPIC_API_KEY", "OPENROUTER_API_KEY", "OPENAI_API_KEY", "LAPSE_BASE_URL", "LAPSE_AGENT"):
         monkeypatch.delenv(env, raising=False)
     assert harness.run("Is the Arctic warming?", None, data).model.startswith("rules")   # no key: rules
